@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=5
+_sub=6
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -24,17 +24,15 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		# the main kernel config files
 		'config.x86_64' 'config.vd' 'config.x200' 'config.x270' 'config.x570' 'x509.genkey' "${pkgbase}.preset"
 		# ARCH Patches
-		0001-arch-patches-20191217.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v4/0001-arch-patches.patch
+		0001-arch-patches-20191220.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v7/0001-arch-patches.patch
         # MANJARO Patches
         0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
         0002-amdgpu-nonupstream-navi10-vfio-reset.patch
 		# amdgpu backports
 		0001-amdgpu-sriov-vf-does-not-support-baco.patch
 		0002-amdgpu-fix-gfx-vf-flr-fail-on-navi.patch
-		0003-amdgpu-explicitly-wait-for-cp-idle.patch
-		0004-amdgpu-reinit-clear-state-buffer-after-reset.patch
-		0005-amdgpu-update-gfx-golden-settings-20191211.patch
-		0006-amdgpu-update-gfx-golden-settings-for-navi14-20191211.patch
+		0003-amdgpu-update-gfx-golden-settings-20191211.patch
+		0004-amdgpu-update-gfx-golden-settings-for-navi14-20191211.patch
 		# bmq scheduler
 		#bmq-5.4-20191125.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r0.patch
         # sirlucjan
@@ -44,6 +42,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0001-clearlinux-tweak-intel-cpuidle.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0106-intel_idle-tweak-cpuidle-cstates.patch
 		0002-clearlinux-add-config-opt-for-raid6-bench.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0109-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
 		0003-clearlinux-init-ata-before-graphics.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0110-Initialize-ata-before-graphics.patch
+		0004-clearlinux-rcu-nocb-fix-dump.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0052-rcu-nocb-Fix-dump_tree-hierarchy-print-always-active.patch
 		# vd
 		0001-tune-vm-and-vfs-settings.patch
 		0002-tune-cfs-scheduler.patch
@@ -63,22 +62,20 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('568e9f27fbba86131c2e2849f296d54216e2ed3e8c4d8aa78a93b417cab23ec0'
+sha256sums=('fda561bcdea397ddd59656319c53871002938b19b554f30efed90affa30989c8'
             'SKIP'
-            'db77510e6a269c42d0e67398123187a80fa29db7c4ef10b9873d422f84338391'
+            '79f90fab96cc36fdd9ece69ee819fdae168fc24b70323386e1c99f96653b79ac'
             'a86be5e02a6cf81e79b0d022dd560bb341ee1d7a6d7ab4256a19a6a0d4dd7580'
             '975417fe2e60af9abe5743dee4b5170ce125cb669fb675c7f24b1c98e54defa6'
             'e31f869bc553cc8e09fc1a5f50b3e3b5324d74b14b8674fe8e28816784a417be'
             '50f5651c8a9ce3a19e93f372cc48bacbcc055cf41c4409ae0d8ef3d84e690e4a'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
-            'd3e2903a05d42412bbe7eb1c082208cc47f900e0f5aa9c9c3a470bd13c167a45'
+            '6f57883ac387356ff888d6812b5af917bfe33497a07a0007298073162d57fbda'
             '1fd4518cb0518d68f8db879f16ce16455fdc2200ed232f9e27fb5f1f3b5e4906'
             '7a2758f86dd1339f0f1801de2dbea059b55bf3648e240878b11e6d6890d3089c'
             'c449d684f27a44c2368622b6f76abb960c03281218d4512969c567371a74afe0'
             '1801216e75c7fc6569be04bc134d8233b6cbaa02f96d5eb58f18429bef724683'
-            'fcf767648859ef8ff6a90b598207548ad81a8bf68be75c402ef50a1afb10c3ed'
-            'ebb35c21509e4acddff0f912c85bda501ab4eefd2f0bb976c28e4301bf27eda3'
             'ddbc236dcd79174cbb73552453927062af2bb86a5ae97f2631445993be912845'
             '7fbf6328c7df3a98e409c12e66c9584ed57dd717328281d886739c1855e1a1e4'
             'fd1f34cf87e72ccd6070590028ad34e12dc42285637a0c61894680cb81d4fb88'
@@ -87,6 +84,7 @@ sha256sums=('568e9f27fbba86131c2e2849f296d54216e2ed3e8c4d8aa78a93b417cab23ec0'
             '88b5597753b01f90f77b99580943263969902ffc084972f8843e0659fdd5eb8f'
             '47d26eb8a2ec74b3684ab61837ecfcdad5cdc40722ca01a32684dfdd3775fafc'
             'b4a3d140bc93e4d224570c0f6b87c40c64148571588064858fcdc9f2406feeaa'
+            '94b273be24a11dab3c77df0d3a061921d128bb57e78de87f3955049289110f81'
             'f4041dc77564ee6de09c1c02c59068b8eceb6fbdbe60158acdec0a0cfb5cb3f7'
             '949360a832de6c4951433607444c55369703f8a030455609729d7cf11aca7efc'
             '0d6fbf9a5206529d6791d41767ec254f0040d053713092b5fbb21fbe7f3604b7'
