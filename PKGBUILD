@@ -14,7 +14,7 @@ _kernelname=-vd
 _sub=6
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
-pkgrel=1
+pkgrel=2
 arch=('x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -25,14 +25,20 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		'config.x86_64' 'config.vd' 'config.x200' 'config.x270' 'config.x570' 'x509.genkey' "${pkgbase}.preset"
 		# ARCH Patches
 		0001-arch-patches-20191220.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v7/0001-arch-patches.patch
-        # MANJARO Patches
-        0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
-        0002-amdgpu-nonupstream-navi10-vfio-reset.patch
+        	# MANJARO Patches
+        	0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
+        	0002-amdgpu-nonupstream-navi10-vfio-reset.patch
 		# amdgpu backports
 		0001-amdgpu-sriov-vf-does-not-support-baco.patch
 		0002-amdgpu-fix-gfx-vf-flr-fail-on-navi.patch
 		0003-amdgpu-update-gfx-golden-settings-20191211.patch
 		0004-amdgpu-update-gfx-golden-settings-for-navi14-20191211.patch
+		0005-amdgpu-fix-calltrace-during-kmd-unload.patch
+		0006-amdgpu-skip-rlc-ucode-loading.patch
+		0007-amdgpu-fix-mqd-backup-restore.patch
+		0008-amdgpu-should-stop-gfx-ring.patch
+		0009-amdgpu-fix-gfx10-missing-csib-set.patch
+		0010-amdgpu-unlock-srbm-mutex.patch
 		# bmq scheduler
 		#bmq-5.4-20191125.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r0.patch
         # sirlucjan
@@ -66,7 +72,7 @@ sha256sums=('fda561bcdea397ddd59656319c53871002938b19b554f30efed90affa30989c8'
             'SKIP'
             '79f90fab96cc36fdd9ece69ee819fdae168fc24b70323386e1c99f96653b79ac'
             'a86be5e02a6cf81e79b0d022dd560bb341ee1d7a6d7ab4256a19a6a0d4dd7580'
-            '975417fe2e60af9abe5743dee4b5170ce125cb669fb675c7f24b1c98e54defa6'
+            '32e0780e28c94dc9633f800a56a04e76d229b9a2c57ea411cb9a3f7154f8ccc7'
             'e31f869bc553cc8e09fc1a5f50b3e3b5324d74b14b8674fe8e28816784a417be'
             '50f5651c8a9ce3a19e93f372cc48bacbcc055cf41c4409ae0d8ef3d84e690e4a'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
@@ -78,6 +84,12 @@ sha256sums=('fda561bcdea397ddd59656319c53871002938b19b554f30efed90affa30989c8'
             '1801216e75c7fc6569be04bc134d8233b6cbaa02f96d5eb58f18429bef724683'
             'ddbc236dcd79174cbb73552453927062af2bb86a5ae97f2631445993be912845'
             '7fbf6328c7df3a98e409c12e66c9584ed57dd717328281d886739c1855e1a1e4'
+            '96e9008ee0e1b305f1831116e76971a52d8c2447a212a9fc145098ce4e6f7773'
+            'e96e8242e3d6a2fab780f016d0f00b2553d7067fb8a74ffa39c3ac6af55bfb58'
+            '08e0197367e71466325d8b2110ec03c32f4ab086f05e13d4961d784df05e6c47'
+            '8e538e60408ebfc98c4458f04362872b1ecaffa3143318f8b75c8c718d24fc1b'
+            '0eab1c053ddc6e8d70b906bd66c3ce8c90abbfb0b79eb053dfdb3740be1194ad'
+            'e42809933e33e6a12df61ca158af41141216a1bdd4c011a748724206faee69ca'
             'fd1f34cf87e72ccd6070590028ad34e12dc42285637a0c61894680cb81d4fb88'
             '9660f0d31bdc5718b7fde41015898f67dce86602886585848d6300dfce2542db'
             'cd228e4b62cab5679c93cd0eda5d96d570f1b3ba84340eddd2d049f2a07eef9d'
