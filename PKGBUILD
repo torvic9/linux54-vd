@@ -25,9 +25,9 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		'config.x86_64' 'config.vd' 'config.x200' 'config.x270' 'config.x570' 'x509.genkey' "${pkgbase}.preset"
 		# ARCH Patches
 		0001-arch-patches-20191220.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v7/0001-arch-patches.patch
-        	# MANJARO Patches
-        	0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
-        	0002-amdgpu-nonupstream-navi10-vfio-reset.patch
+		# MANJARO Patches
+		0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
+		0002-amdgpu-nonupstream-navi10-vfio-reset.patch
 		# amdgpu backports
 		0001-amdgpu-sriov-vf-does-not-support-baco.patch
 		0002-amdgpu-fix-gfx-vf-flr-fail-on-navi.patch
@@ -41,7 +41,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0010-amdgpu-unlock-srbm-mutex.patch
 		# bmq scheduler
 		#bmq-5.4-20191125.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r0.patch
-        # sirlucjan
+		# sirlucjan
 		0001-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0001-futex-Split-key-setup-from-key-queue-locking-and-rea.patch
 		0002-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0002-futex-Implement-mechanism-to-wait-on-any-of-several-.patch
 		0003-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0003-futex-Change-WAIT_MULTIPLE-opcode-to-31.patch
@@ -55,6 +55,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0003-optimise-module-compression.patch
 		0004-add-nvme-hwmon-temp.patch
 		0005-cpu-optimisations-graysky.patch
+		0006-tune-cpufreq-ondemand.patch
 		# hho
 		0001-enable-O3-opt-for-all-arches.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/kconfig-20191211-enable-O3-for-all-arches.patch
 		0002-mm-split-vmalloc_sync_all.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/mm-20191009-split-vmalloc_sync_all.patch
@@ -97,11 +98,12 @@ sha256sums=('fda561bcdea397ddd59656319c53871002938b19b554f30efed90affa30989c8'
             '47d26eb8a2ec74b3684ab61837ecfcdad5cdc40722ca01a32684dfdd3775fafc'
             'b4a3d140bc93e4d224570c0f6b87c40c64148571588064858fcdc9f2406feeaa'
             '94b273be24a11dab3c77df0d3a061921d128bb57e78de87f3955049289110f81'
-            'f4041dc77564ee6de09c1c02c59068b8eceb6fbdbe60158acdec0a0cfb5cb3f7'
-            '949360a832de6c4951433607444c55369703f8a030455609729d7cf11aca7efc'
+            '725d6693af00daf0a1e2fe8042249dfd16b90bb3f72e5cb841b9e4f7b82e4b7d'
+            '58fd33be8d9ab594a01f1da5858567ac7ce8d3e44e0f2f3682e9104c4fb07514'
             '0d6fbf9a5206529d6791d41767ec254f0040d053713092b5fbb21fbe7f3604b7'
             'c6944879f5cdfd335a3adc75b6f6194d127ad93d4dd5bf90d2ad505e83c9b6d2'
             '607097f22f202cd829f12acce7a401fb7f7af5678ffeda90c1fc7da71b895ad7'
+            '163a15c850a79f5d1a4c3b3afd859870a78d08e1a165f4af43be60ad78220866'
             '21eac56173eb18959bbf02c1687dc7fa2c5d1df063ec90e6507f0008ce88bbef'
             '47844884e429ffc395f51610825271c2549d2ab28b52251407d5b4f8a21fe1d9'
             '7f9aa69187e7d197017c6bb15b623330e050a27ba384a3894cbd3e347fdd8a83'

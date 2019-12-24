@@ -7,6 +7,9 @@
 # Contributor: Helmut Stult <helmut[at]manjaro[dot]org>
 # torvic9
 
+# enable/disable module signing
+_signing=1
+
 _linuxprefix=linux54-vd
 _extramodules=extramodules-5.4-vd
 pkgname=$_linuxprefix-acpi_call
@@ -43,8 +46,10 @@ package() {
 
   install -dm 755 "${pkgdir}"/usr/lib/{modules/${_extramodules},modules-load.d}
   install -m 644 acpi_call.ko "${pkgdir}"/usr/lib/modules/${_extramodules}/
-  echo -e "Signing modules with kernel key...\n"
-  sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/acpi_call.ko"
+  if [[ ${_signing} -eq 1 ]] ; then
+  	echo -e "Signing modules with kernel key...\n"
+  	sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/acpi_call.ko"
+  fi
   xz -T2 --lzma2=dict=2M "${pkgdir}"/usr/lib/modules/${_extramodules}/acpi_call.ko
   echo acpi_call > "${pkgdir}"/usr/lib/modules-load.d/${pkgname}.conf
 

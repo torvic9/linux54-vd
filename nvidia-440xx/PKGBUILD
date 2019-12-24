@@ -6,6 +6,9 @@
 # Maintainer: Helmut Stult <helmut@manjaro.org>
 # torvic9
 
+# enable/disable module signing
+_signing=1
+
 _linuxprefix=linux54-vd
 _extramodules=extramodules-5.4-vd
 pkgname=$_linuxprefix-nvidia-440xx
@@ -36,7 +39,7 @@ prepare() {
     sh "${_pkg}.run" --extract-only
     cd "${_pkg}"
     # patches here
-    patch -Np1 ../buildflags-O3.patch
+    patch -Np1 -i ../buildflags-O3.patch
 }
 
 build() {
@@ -56,10 +59,12 @@ package() {
         install -D -m644 "${srcdir}/${_pkg}/kernel/nvidia-uvm.ko" \
             "${pkgdir}/usr/lib/modules/${_extramodules}/nvidia-uvm.ko"
     fi
-	echo -e "Signing modules with kernel key...\n"
-    for i in nvidia.ko nvidia-{modeset,drm,uvm}.ko; do
-		sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/$i"
-    done
+	if [[ ${_signing} -eq 1 ]] ; then
+		echo -e "Signing modules with kernel key...\n"
+    	for i in nvidia.ko nvidia-{modeset,drm,uvm}.ko; do
+			sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/$i"
+    	done
+	fi
     xz -T2 --lzma2=dict=2M "${pkgdir}/usr/lib/modules/${_extramodules}/"*.ko
     sed -i -e "s/EXTRAMODULES='.*'/EXTRAMODULES='${_extramodules}'/" "${startdir}/nvidia.install"
 }

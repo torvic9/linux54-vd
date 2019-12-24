@@ -1,46 +1,15 @@
-From b321c78cefb468ca515a1d46d553c3bfa98c1d79 Mon Sep 17 00:00:00 2001
+From 986cb3cd6ce01058426b2699712495ba4af4bfbc Mon Sep 17 00:00:00 2001
 From: torvic9 <torvic9@mailbox.org>
-Date: Mon, 2 Dec 2019 20:24:17 +0100
+Date: Sun, 22 Dec 2019 18:40:36 +0100
 Subject: [PATCH] tune cfs scheduler
 
 Signed-off-by: torvic9 <torvic9@mailbox.org>
 ---
- kernel/sched/core.c |  4 ++--
- kernel/sched/fair.c | 16 ++++++++--------
- 2 files changed, 10 insertions(+), 10 deletions(-)
+ kernel/sched/fair.c | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
 
-diff --git a/kernel/sched/core.c b/kernel/sched/core.c
-index 44123b4d14e8..66b7445eca06 100644
---- a/kernel/sched/core.c
-+++ b/kernel/sched/core.c
-@@ -54,11 +54,11 @@ const_debug unsigned int sysctl_sched_features =
- 
- /*
-  * Number of tasks to iterate in a single balance run.
-  * Limited because this is done with IRQs disabled.
-  */
--const_debug unsigned int sysctl_sched_nr_migrate = 32;
-+const_debug unsigned int sysctl_sched_nr_migrate = 64;
- 
- /*
-  * period over which we measure -rt task CPU usage in us.
-  * default: 1s
-  */
-@@ -68,11 +68,11 @@ __read_mostly int scheduler_running;
- 
- /*
-  * part of the period that we allow rt tasks to run in us.
-  * default: 0.95s
-  */
--int sysctl_sched_rt_runtime = 950000;
-+int sysctl_sched_rt_runtime = 960000;
- 
- /*
-  * __task_rq_lock - lock the rq @p resides on.
-  */
- struct rq *__task_rq_lock(struct task_struct *p, struct rq_flags *rf)
 diff --git a/kernel/sched/fair.c b/kernel/sched/fair.c
-index 69a81a5709ff..aae0f87a1fa5 100644
+index 69a81a5709ff..5b6d37353a85 100644
 --- a/kernel/sched/fair.c
 +++ b/kernel/sched/fair.c
 @@ -35,12 +35,12 @@
@@ -73,7 +42,7 @@ index 69a81a5709ff..aae0f87a1fa5 100644
   * This value is kept at sysctl_sched_latency/sysctl_sched_min_granularity
   */
  static unsigned int sched_nr_latency = 8;
-@@ -79,14 +79,14 @@ unsigned int sysctl_sched_child_runs_first __read_mostly;
+@@ -79,12 +79,12 @@ unsigned int sysctl_sched_child_runs_first __read_mostly;
   * and reduces their over-scheduling. Synchronous workloads will still
   * have immediate wakeup/sleep latencies.
   *
@@ -84,13 +53,10 @@ index 69a81a5709ff..aae0f87a1fa5 100644
 +unsigned int sysctl_sched_wakeup_granularity			= 750000UL;
 +static unsigned int normalized_sysctl_sched_wakeup_granularity	= 750000UL;
  
--const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
-+const_debug unsigned int sysctl_sched_migration_cost	= 200000UL;
+ const_debug unsigned int sysctl_sched_migration_cost	= 500000UL;
  
  #ifdef CONFIG_SMP
  /*
-  * For asym packing, by default the lower numbered CPU has higher priority.
-  */
 @@ -113,11 +113,11 @@ int __weak arch_asym_cpu_priority(int cpu)
   * to consumption or the quota being specified to be smaller than the slice)
   * we will always only issue the remaining available time.
@@ -105,5 +71,5 @@ index 69a81a5709ff..aae0f87a1fa5 100644
  {
  	lw->weight += inc;
 -- 
-2.24.0
+2.24.1
 

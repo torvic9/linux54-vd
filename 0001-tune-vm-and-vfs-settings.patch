@@ -1,15 +1,15 @@
-From 874233843a5058eb0bb418051baab7d9df49db8b Mon Sep 17 00:00:00 2001
+From 0a748e7a6285faf697d7fe5493aeb6bfb133ff7f Mon Sep 17 00:00:00 2001
 From: torvic9 <torvic9@mailbox.org>
-Date: Mon, 2 Dec 2019 20:17:46 +0100
+Date: Sun, 22 Dec 2019 18:38:25 +0100
 Subject: [PATCH] tune vm and vfs settings
 
 Signed-off-by: torvic9 <torvic9@mailbox.org>
 ---
  fs/dcache.c         | 2 +-
  include/linux/mm.h  | 2 +-
- mm/page-writeback.c | 6 +++---
+ mm/page-writeback.c | 4 ++--
  mm/vmscan.c         | 2 +-
- 4 files changed, 6 insertions(+), 6 deletions(-)
+ 4 files changed, 5 insertions(+), 5 deletions(-)
 
 diff --git a/fs/dcache.c b/fs/dcache.c
 index e88cf0554e65..e282ee1d74e5 100644
@@ -46,7 +46,7 @@ index a2adf95b3f9c..d7823ee21744 100644
  
  void page_cache_sync_readahead(struct address_space *mapping,
 diff --git a/mm/page-writeback.c b/mm/page-writeback.c
-index 50055d2e4ea8..9d800356f77a 100644
+index 50055d2e4ea8..68ff28d67c8a 100644
 --- a/mm/page-writeback.c
 +++ b/mm/page-writeback.c
 @@ -69,11 +69,11 @@ static long ratelimit_pages = 32;
@@ -62,26 +62,14 @@ index 50055d2e4ea8..9d800356f77a 100644
   * dirty_background_bytes starts at 0 (disabled) so that it is a function of
   * dirty_background_ratio * the amount of dirtyable memory
   */
-@@ -86,22 +86,22 @@ unsigned long dirty_background_bytes;
- int vm_highmem_is_dirtyable;
- 
- /*
-  * The generator of dirty data starts writeback at this percentage
-  */
--int vm_dirty_ratio = 20;
-+int vm_dirty_ratio = 15;
- 
- /*
-  * vm_dirty_bytes starts at 0 (disabled) so that it is a function of
-  * vm_dirty_ratio * the amount of dirtyable memory
-  */
+@@ -97,11 +97,11 @@ int vm_dirty_ratio = 20;
  unsigned long vm_dirty_bytes;
  
  /*
   * The interval between `kupdate'-style writebacks
   */
 -unsigned int dirty_writeback_interval = 5 * 100; /* centiseconds */
-+unsigned int dirty_writeback_interval = 15 * 100; /* centiseconds */
++unsigned int dirty_writeback_interval = 10 * 100; /* centiseconds */
  
  EXPORT_SYMBOL_GPL(dirty_writeback_interval);
  
@@ -105,5 +93,5 @@ index ee4eecc7e1c2..6d28dee5cbfb 100644
   */
  unsigned long vm_total_pages;
 -- 
-2.24.0
+2.24.1
 
