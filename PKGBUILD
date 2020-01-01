@@ -11,10 +11,10 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=6
+_sub=7
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -23,8 +23,10 @@ options=('!strip')
 source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sign}
 		# the main kernel config files
 		'config.x86_64' 'config.vd' 'config.x200' 'config.x270' 'config.x570' 'x509.genkey' "${pkgbase}.preset"
+		# Prepatch from stable-queue
+		#
 		# ARCH Patches
-		0001-arch-patches-20191220.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v7/0001-arch-patches.patch
+		0001-arch-patches-20191231.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v12/0001-arch-patches.patch
 		# MANJARO Patches
 		0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
 		0002-amdgpu-nonupstream-navi10-vfio-reset.patch
@@ -40,7 +42,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0009-amdgpu-fix-gfx10-missing-csib-set.patch
 		0010-amdgpu-unlock-srbm-mutex.patch
 		# bmq scheduler
-		#bmq-5.4-20191125.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r0.patch
+		#bmq-5.4-20191219.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r1.patch
 		# sirlucjan
 		0001-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0001-futex-Split-key-setup-from-key-queue-locking-and-rea.patch
 		0002-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0002-futex-Implement-mechanism-to-wait-on-any-of-several-.patch
@@ -69,7 +71,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('fda561bcdea397ddd59656319c53871002938b19b554f30efed90affa30989c8'
+sha256sums=('abc9b21d9146d95853dac35f4c4489a0199aff53ee6eee4b0563d1b37079fcc9'
             'SKIP'
             '79f90fab96cc36fdd9ece69ee819fdae168fc24b70323386e1c99f96653b79ac'
             'a86be5e02a6cf81e79b0d022dd560bb341ee1d7a6d7ab4256a19a6a0d4dd7580'
@@ -78,7 +80,7 @@ sha256sums=('fda561bcdea397ddd59656319c53871002938b19b554f30efed90affa30989c8'
             '50f5651c8a9ce3a19e93f372cc48bacbcc055cf41c4409ae0d8ef3d84e690e4a'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
-            '6f57883ac387356ff888d6812b5af917bfe33497a07a0007298073162d57fbda'
+            '0adb90b7c29391d4bc39270679461308a9c88e0ce637efb8ce732ef26fa8a9b1'
             '1fd4518cb0518d68f8db879f16ce16455fdc2200ed232f9e27fb5f1f3b5e4906'
             '7a2758f86dd1339f0f1801de2dbea059b55bf3648e240878b11e6d6890d3089c'
             'c449d684f27a44c2368622b6f76abb960c03281218d4512969c567371a74afe0'
@@ -122,6 +124,7 @@ prepare() {
   # http://git.kernel.org/?p=linux/kernel/git/stable/stable-queue.git
   # enable only if you have "gen-stable-queue-patch.sh" executed before
   #patch -Np1 -i "${srcdir}/prepatch-${_basekernel}`date +%Y%m%d`"
+
   printf '\n'
   msg2 "APPLYING PATCHES"
 
