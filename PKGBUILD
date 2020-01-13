@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=8
+_sub=11
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -26,11 +26,11 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		# Prepatch from stable-queue
 		#
 		# ARCH Patches
-		0001-arch-patches-20200105.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v14/0001-arch-patches.patch
+		0001-arch-patches-20200109.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v16/0001-arch-patches.patch
 		# MANJARO Patches
 		0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
 		0002-amdgpu-nonupstream-navi10-vfio-reset.patch
-		# amdgpu backports
+		# amdgpu
 		0001-amdgpu-sriov-vf-does-not-support-baco.patch
 		0002-amdgpu-fix-gfx-vf-flr-fail-on-navi.patch
 		0003-amdgpu-update-gfx-golden-settings-20191211.patch
@@ -41,6 +41,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0008-amdgpu-should-stop-gfx-ring.patch
 		0009-amdgpu-fix-gfx10-missing-csib-set.patch
 		0010-amdgpu-unlock-srbm-mutex.patch
+		0011-amdgpu-revert-dont-schedule-jobs-while-in-reset.patch
 		# bmq scheduler
 		#bmq-5.4-20191219.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r1.patch
 		# sirlucjan
@@ -71,7 +72,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('42c414c902193f9e8a1b70c728ca440de02d85dc29102f52ef98cfbf20d29a52'
+sha256sums=('62bd36e5d5e1d8208750ccddd8e8aa3d109b29b5ac5344b5b1c47d0f6d55d72c'
             'SKIP'
             '79f90fab96cc36fdd9ece69ee819fdae168fc24b70323386e1c99f96653b79ac'
             'a86be5e02a6cf81e79b0d022dd560bb341ee1d7a6d7ab4256a19a6a0d4dd7580'
@@ -80,7 +81,7 @@ sha256sums=('42c414c902193f9e8a1b70c728ca440de02d85dc29102f52ef98cfbf20d29a52'
             '50f5651c8a9ce3a19e93f372cc48bacbcc055cf41c4409ae0d8ef3d84e690e4a'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
-            '6541a74db66b5d46602b9f362d28d8afa6746a501afe303f0b66c076450944f5'
+            '6b8434fb437b3b6986fd7ad7616fa214d64790bc967c3d3d9f65485b526163ad'
             '1fd4518cb0518d68f8db879f16ce16455fdc2200ed232f9e27fb5f1f3b5e4906'
             '7a2758f86dd1339f0f1801de2dbea059b55bf3648e240878b11e6d6890d3089c'
             'c449d684f27a44c2368622b6f76abb960c03281218d4512969c567371a74afe0'
@@ -93,6 +94,7 @@ sha256sums=('42c414c902193f9e8a1b70c728ca440de02d85dc29102f52ef98cfbf20d29a52'
             '8e538e60408ebfc98c4458f04362872b1ecaffa3143318f8b75c8c718d24fc1b'
             '0eab1c053ddc6e8d70b906bd66c3ce8c90abbfb0b79eb053dfdb3740be1194ad'
             'e42809933e33e6a12df61ca158af41141216a1bdd4c011a748724206faee69ca'
+            '74fe306e22754d8488d5354b21233c087d3f7975fa88a8ff85f8a5e1d1ec6855'
             'fd1f34cf87e72ccd6070590028ad34e12dc42285637a0c61894680cb81d4fb88'
             '9660f0d31bdc5718b7fde41015898f67dce86602886585848d6300dfce2542db'
             'cd228e4b62cab5679c93cd0eda5d96d570f1b3ba84340eddd2d049f2a07eef9d'
@@ -105,7 +107,7 @@ sha256sums=('42c414c902193f9e8a1b70c728ca440de02d85dc29102f52ef98cfbf20d29a52'
             '0d6fbf9a5206529d6791d41767ec254f0040d053713092b5fbb21fbe7f3604b7'
             'c6944879f5cdfd335a3adc75b6f6194d127ad93d4dd5bf90d2ad505e83c9b6d2'
             '607097f22f202cd829f12acce7a401fb7f7af5678ffeda90c1fc7da71b895ad7'
-            '12d0f32b234f3e94303d6aed2e58ce79d796b965f57794a6d275ec9a28027d7f'
+            '4281dfd457e93d39220bc3462a80a56b0b1b9f50987a59c0c4352338d70b7b71'
             '21eac56173eb18959bbf02c1687dc7fa2c5d1df063ec90e6507f0008ce88bbef'
             '47844884e429ffc395f51610825271c2549d2ab28b52251407d5b4f8a21fe1d9'
             '7f9aa69187e7d197017c6bb15b623330e050a27ba384a3894cbd3e347fdd8a83'
