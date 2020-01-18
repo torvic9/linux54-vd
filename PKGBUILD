@@ -11,10 +11,11 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=11
+_sub=13
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
+_archpatch=20200118
 arch=('x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -26,9 +27,9 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		# Prepatch from stable-queue
 		#
 		# ARCH Patches
-		0001-arch-patches-20200109.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v16/0001-arch-patches.patch
+		0001-arch-patches-${_archpatch}.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v21/0001-arch-patches.patch
 		# MANJARO Patches
-		0001-amdgpu-Add-DC-feature-mask-to-disable-fractional-pwm.patch
+		0001-i2c-nuvoton-nc677x-hwmon-driver.patch
 		0002-amdgpu-nonupstream-navi10-vfio-reset.patch
 		# amdgpu
 		0001-amdgpu-sriov-vf-does-not-support-baco.patch
@@ -42,8 +43,8 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0009-amdgpu-fix-gfx10-missing-csib-set.patch
 		0010-amdgpu-unlock-srbm-mutex.patch
 		0011-amdgpu-revert-dont-schedule-jobs-while-in-reset.patch
-		# bmq scheduler
-		#bmq-5.4-20191219.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r1.patch
+		# BMQ scheduler
+		#0001-bmq-linux54-20200117.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r2.patch
 		# sirlucjan
 		0001-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0001-futex-Split-key-setup-from-key-queue-locking-and-rea.patch
 		0002-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0002-futex-Implement-mechanism-to-wait-on-any-of-several-.patch
@@ -72,17 +73,17 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('62bd36e5d5e1d8208750ccddd8e8aa3d109b29b5ac5344b5b1c47d0f6d55d72c'
+sha256sums=('49fb29d96d7e7c1d7e6082701bd26bfddd0fbc87a796fb6ba6258bc5fd386ad7'
             'SKIP'
-            '79f90fab96cc36fdd9ece69ee819fdae168fc24b70323386e1c99f96653b79ac'
-            'a86be5e02a6cf81e79b0d022dd560bb341ee1d7a6d7ab4256a19a6a0d4dd7580'
-            '32e0780e28c94dc9633f800a56a04e76d229b9a2c57ea411cb9a3f7154f8ccc7'
-            'e31f869bc553cc8e09fc1a5f50b3e3b5324d74b14b8674fe8e28816784a417be'
-            '50f5651c8a9ce3a19e93f372cc48bacbcc055cf41c4409ae0d8ef3d84e690e4a'
+            'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
+            '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
+            'aa7e994aea683dcad5ae60a8c6dafb2d5264e32914a9645202782293b83f0a95'
+            '04f4b1dabf507ebe5e7304a8cdcf490bc2c2620bb7d1e4244cbd4b18e0d6789f'
+            '8f0ff11796e2495ddca1a45a38bbac13c87c1bf8d8e89f4bc495ca6993dad8f3'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
-            '6b8434fb437b3b6986fd7ad7616fa214d64790bc967c3d3d9f65485b526163ad'
-            '1fd4518cb0518d68f8db879f16ce16455fdc2200ed232f9e27fb5f1f3b5e4906'
+            '71a9a379d1767a7e911d7457c97f2063ab544ff23e0e14d47a531adee5c3150d'
+            '0556859a8168c8f7da9af8e2059d33216d9e5378d2cac70ca54c5ff843fa5add'
             '7a2758f86dd1339f0f1801de2dbea059b55bf3648e240878b11e6d6890d3089c'
             'c449d684f27a44c2368622b6f76abb960c03281218d4512969c567371a74afe0'
             '1801216e75c7fc6569be04bc134d8233b6cbaa02f96d5eb58f18429bef724683'
