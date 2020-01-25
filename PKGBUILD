@@ -11,11 +11,11 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=13
+_sub=14
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
-_archpatch=20200118
+_archpatch=20200123
 arch=('x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -27,7 +27,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		# Prepatch from stable-queue
 		#
 		# ARCH Patches
-		0001-arch-patches-${_archpatch}.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v21/0001-arch-patches.patch
+		0001-arch-patches-${_archpatch}.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v22/0001-arch-patches.patch
 		# MANJARO Patches
 		0001-i2c-nuvoton-nc677x-hwmon-driver.patch
 		0002-amdgpu-nonupstream-navi10-vfio-reset.patch
@@ -73,7 +73,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('49fb29d96d7e7c1d7e6082701bd26bfddd0fbc87a796fb6ba6258bc5fd386ad7'
+sha256sums=('531e18b0eef516fa4b3843f89729fafbf3c6bc00325b082cc1f2cfcb28c8d7f0'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
@@ -82,7 +82,7 @@ sha256sums=('49fb29d96d7e7c1d7e6082701bd26bfddd0fbc87a796fb6ba6258bc5fd386ad7'
             '8f0ff11796e2495ddca1a45a38bbac13c87c1bf8d8e89f4bc495ca6993dad8f3'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
-            '71a9a379d1767a7e911d7457c97f2063ab544ff23e0e14d47a531adee5c3150d'
+            '8bb280522b171712c6085f8fa11c8ee4dec6ea202efa22b71bdb077ccd120574'
             '0556859a8168c8f7da9af8e2059d33216d9e5378d2cac70ca54c5ff843fa5add'
             '7a2758f86dd1339f0f1801de2dbea059b55bf3648e240878b11e6d6890d3089c'
             'c449d684f27a44c2368622b6f76abb960c03281218d4512969c567371a74afe0'
