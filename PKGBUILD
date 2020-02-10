@@ -11,11 +11,11 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=16
+_sub=18
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
-pkgrel=1
-_archpatch=20200127
+pkgrel=2
+_archpatch=20200203
 arch=('x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -27,7 +27,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		# Prepatch from stable-queue
 		#
 		# ARCH Patches
-		0001-arch-patches-${_archpatch}.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v23/0001-arch-patches.patch
+		0001-arch-patches-${_archpatch}.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v24/0001-arch-patches.patch
 		# MANJARO Patches
 		0001-i2c-nuvoton-nc677x-hwmon-driver.patch
 		0002-amdgpu-nonupstream-navi10-vfio-reset.patch
@@ -49,6 +49,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0001-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0001-futex-Split-key-setup-from-key-queue-locking-and-rea.patch
 		0002-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0002-futex-Implement-mechanism-to-wait-on-any-of-several-.patch
 		0003-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0003-futex-Change-WAIT_MULTIPLE-opcode-to-31.patch
+		#0004-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-v2/0001-futex-Add-support-for-multiple-keys-at-the-same-time.patch
 		0001-clearlinux-tweak-intel-cpuidle.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0106-intel_idle-tweak-cpuidle-cstates.patch
 		0002-clearlinux-add-config-opt-for-raid6-bench.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0109-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
 		0003-clearlinux-init-ata-before-graphics.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0110-Initialize-ata-before-graphics.patch
@@ -73,16 +74,16 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('911541df2974782062f551ba0a818d7822ec69db4c41e590bcc7422398bada7a'
+sha256sums=('92e9f1fd69543e9ce2a9e6eb918823b1846d2dd99246a74456263cd5ad234d89'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
-            'aa7e994aea683dcad5ae60a8c6dafb2d5264e32914a9645202782293b83f0a95'
+            'a8172dee5d960e1b2fece8d535a3c49f54e0f8e3e2fb52dd5075e54f86ad617b'
             '04f4b1dabf507ebe5e7304a8cdcf490bc2c2620bb7d1e4244cbd4b18e0d6789f'
             '8f0ff11796e2495ddca1a45a38bbac13c87c1bf8d8e89f4bc495ca6993dad8f3'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
-            '376830edb0301e660a79b5db1e279c11ef3dcf787f38bce0bc7f7d586a6167a2'
+            '6b305e46feb6741e3e2a07b8a55bb1bcb7b875949f278396dc55219549feb29e'
             '0556859a8168c8f7da9af8e2059d33216d9e5378d2cac70ca54c5ff843fa5add'
             '7a2758f86dd1339f0f1801de2dbea059b55bf3648e240878b11e6d6890d3089c'
             'c449d684f27a44c2368622b6f76abb960c03281218d4512969c567371a74afe0'
@@ -108,15 +109,32 @@ sha256sums=('911541df2974782062f551ba0a818d7822ec69db4c41e590bcc7422398bada7a'
             '0d6fbf9a5206529d6791d41767ec254f0040d053713092b5fbb21fbe7f3604b7'
             'c6944879f5cdfd335a3adc75b6f6194d127ad93d4dd5bf90d2ad505e83c9b6d2'
             '607097f22f202cd829f12acce7a401fb7f7af5678ffeda90c1fc7da71b895ad7'
-            '4281dfd457e93d39220bc3462a80a56b0b1b9f50987a59c0c4352338d70b7b71'
+            '97f59d09ef55ea8a3634ea426fdc5db0591f77cca14cfe2db49176f71af80037'
             '21eac56173eb18959bbf02c1687dc7fa2c5d1df063ec90e6507f0008ce88bbef'
             '47844884e429ffc395f51610825271c2549d2ab28b52251407d5b4f8a21fe1d9'
             '7f9aa69187e7d197017c6bb15b623330e050a27ba384a3894cbd3e347fdd8a83'
             'b37b2132e97357201e039872c595da18aade6a64743d35ec33ebfd4d4851c3f4'
             '9c006e4845c22808c954ca2374a2a9dd927c192e4bdaf0d00c6abc559831106e')
 
-export KBUILD_BUILD_USER=systemd-run
-export KBUILD_BUILD_HOST=manjaro
+export KBUILD_BUILD_USER=manjaro
+export KBUILD_BUILD_HOST=systemd-run
+_clang=0
+
+if [[ ${_clang} -eq 1 ]]; then
+	export HOSTCC='/opt/clang10/bin/clang --target=x86_64-unknown-linux-gnu'
+	export HOSTLD=/opt/clang10/bin/ld.lld
+	export HOSTAR=/opt/clang10/bin/llvm-ar
+	export CC='/opt/clang10/bin/clang --target=x86_64-unknown-linux-gnu'
+	export LD=/opt/clang10/bin/ld.lld
+	export AR=/opt/clang10/bin/llvm-ar
+	export AS=/opt/clang10/bin/llvm-as
+	export OBJCOPY=/opt/clang10/bin/llvm-objcopy
+	export OBJDUMP=/opt/clang10/bin/llvm-objdump
+	export STRIP=/opt/clang10/bin/llvm-strip
+	export NM=/opt/clang10/bin/llvm-nm
+	export RANLIB=/opt/clang10/bin/llvm-ranlib
+	CLANGOPTS="CC=/opt/clang10/bin/clang HOSTCC=/opt/clang10/bin/clang"
+fi
 
 prepare() {
   local TBOLD=$(tput bold)
@@ -141,8 +159,6 @@ prepare() {
         	patch -Np1 -i "$srcdir/${filename}"
   	fi
   done
-
-  cat ../x509.genkey > ./certs/x509.genkey
 
   # kernel config
   printf '\n'
@@ -177,6 +193,7 @@ prepare() {
       echo "Path does not exist. Aborting..." ; exit 2
     fi
   else
+	cat ../x509.genkey > ./certs/x509.genkey
     sed -i 's/vd54\-kernel\-key/signing\_key/' ./.config || exit 2
   fi
 
@@ -186,31 +203,31 @@ prepare() {
   fi
 
   # set patchlevel to 4
-  sed -ri "s|^(PATCHLEVEL =).*|\1 4|" Makefile
+  #sed -ri "s|^(PATCHLEVEL =).*|\1 4|" Makefile
 
   # set extraversion to pkgrel
   sed -ri "s|^(EXTRAVERSION =).*|\1 -${pkgrel}|" Makefile
 
   # don't run depmod on 'make install'. We'll do this ourselves in packaging
-  sed -i '2iexit 0' scripts/depmod.sh
+  #sed -i '2iexit 0' scripts/depmod.sh
 
   # get kernel version
-  make prepare
-  make -s kernelrelease > version
+  make $CLANGOPTS prepare
+  make $CLANGOPTS -s kernelrelease > version
   printf '\n'
   msg2 "Prepared %s version %s" "$pkgbase" "$(<version)"
   read -p "---- Enter 'y' for nconfig: " NCONFIG
-  if [[ $NCONFIG = "y" ]] ; then make nconfig ; fi
+  [[ $NCONFIG = "y" ]] && make $CLANGOPTS nconfig
 
   # rewrite configuration
-  yes "" | make config >/dev/null
+  yes "" | make $CLANGOPTS config >/dev/null
 }
 
 build() {
   cd "${srcdir}/linux-${pkgver}"
 
   # build!
-  make ${MAKEFLAGS} LOCALVERSION= bzImage modules
+  make $CLANGOPTS ${MAKEFLAGS} LOCALVERSION= bzImage modules
 }
 
 package_linux54-vd() {
@@ -221,19 +238,14 @@ package_linux54-vd() {
 
   cd "${srcdir}/linux-${pkgver}"
 
-  KARCH=x86
-
   local kernver="$(<version)"
   local modulesdir="$pkgdir/usr/lib/modules/$kernver"
 
   mkdir -p "${pkgdir}"/{boot,usr/lib/modules}
-  printf '\n'
-  msg2 "Installing modules..."
-  make LOCALVERSION= INSTALL_MOD_PATH="${pkgdir}/usr" modules_install
 
   # systemd expects to find the kernel here to allow hibernation
   # https://github.com/systemd/systemd/commit/edda44605f06a41fb86b7ab8128dcf99161d2344
-  install -Dm644 "$(make -s image_name)" "$modulesdir/vmlinuz"
+  install -Dm644 "$(make $CLANGOPTS -s image_name)" "$modulesdir/vmlinuz"
 
   # Used by mkinitcpio to name the kernel
   echo "${pkgbase}" | install -Dm644 /dev/stdin "$modulesdir/pkgbase"
@@ -251,21 +263,23 @@ package_linux54-vd() {
     install -Dm644 /dev/stdin "${pkgdir}/usr/lib/modules/${_extramodules}/version"
 
   # now we call depmod...
+  #printf '\n'
+  #msg2 "Running depmod..."
+  #depmod -v -b "${pkgdir}/usr" -F System.map "$kernver"
+
   printf '\n'
-  msg2 "Running depmod..."
-  depmod -v -b "${pkgdir}/usr" -F System.map "$kernver"
+  msg2 "Installing modules..."
+  make $CLANGOPTS ${MAKEFLAGS} LOCALVERSION= INSTALL_MOD_PATH="${pkgdir}/usr" modules_install
 
   # remove build and source links
   rm $modulesdir/source
   rm $modulesdir/build
+  [[ -f ./certs/vd54-kernel-key.pem ]] && rm ./certs/vd54-kernel-key.pem
 
   # Fixing permissions
   printf '\n'
   msg2 "Fixing permissions..."
   chmod -Rc u=rwX,go=rX "$pkgdir"
-
-  # add vmlinux
-  #install -Dt "$modulesdir/build" -m644 vmlinux
 
   # add mkinitcpio preset (not strictly needed)
   install -Dm644 "$srcdir/${pkgbase}.preset" "$pkgdir/etc/mkinitcpio.d/${pkgbase}.preset"
@@ -281,21 +295,22 @@ package_linux54-vd-headers() {
 
   printf '\n'
   msg2 "Installing headers..."
-  install -Dt "${_builddir}" -m644 Makefile .config Module.symvers System.map || exit 32
+  install -Dt "${_builddir}" -m644 Makefile .config Module.symvers System.map version vmlinux || exit 32
   install -Dt "${_builddir}/kernel" -m644 kernel/Makefile
-
+  install -Dt "${_builddir}/arch/x86" -m644 "arch/x86/Makefile"
   mkdir "${_builddir}/.tmp_versions"
 
   cp -t "${_builddir}" -a include scripts
 
-  install -Dt "${_builddir}/arch/${KARCH}" -m644 "arch/${KARCH}/Makefile"
-  install -Dt "${_builddir}/arch/${KARCH}/kernel" -m644 "arch/${KARCH}/kernel/asm-offsets.s"
-  #install -Dt "${_builddir}/arch/${KARCH}/kernel" -m644 "arch/${KARCH}/kernel/macros.s"
-
-  cp -t "${_builddir}/arch/${KARCH}" -a "arch/${KARCH}/include"
-
   # add objtool for external module building and enabled VALIDATION_STACK option
   install -Dt "${_builddir}/tools/objtool" tools/objtool/objtool
+
+  # add xfs and shmem for aufs building
+  mkdir -p "${_builddir}"/{fs/xfs,mm}
+
+  cp -t "${_builddir}/arch/x86" -a "arch/x86/include"
+  install -Dt "${_builddir}/arch/x86/kernel" -m644 "arch/x86/kernel/asm-offsets.s"
+  #install -Dt "${_builddir}/arch/${KARCH}/kernel" -m644 "arch/${KARCH}/kernel/macros.s"
 
   install -Dt "${_builddir}/drivers/md" -m644 drivers/md/*.h
   install -Dt "${_builddir}/net/mac80211" -m644 net/mac80211/*.h
@@ -308,11 +323,8 @@ package_linux54-vd-headers() {
   install -Dt "${_builddir}/drivers/media/dvb-frontends" -m644 drivers/media/dvb-frontends/*.h
   install -Dt "${_builddir}/drivers/media/tuners" -m644 drivers/media/tuners/*.h
 
-  # add xfs and shmem for aufs building
-  mkdir -p "${_builddir}"/{fs/xfs,mm}
-
   # copy in Kconfig files
-  find . -name Kconfig\* -exec install -Dm644 {} "${_builddir}/{}" \;
+  find . -name 'Kconfig*' -exec install -Dm644 {} "${_builddir}/{}" \;
 
   # remove unneeded stuff
   printf '\n'
