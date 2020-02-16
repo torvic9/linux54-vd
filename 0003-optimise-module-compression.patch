@@ -23,7 +23,7 @@ index 641a62423fd6..d0f6cf21a252 100644
    endif # CONFIG_MODULE_COMPRESS_GZIP
    ifdef CONFIG_MODULE_COMPRESS_XZ
 -    mod_compress_cmd = xz -f
-+    mod_compress_cmd = xz -T2 --lzma2=dict=2M -f
++    mod_compress_cmd = xz -T2 -4 -f
    endif # CONFIG_MODULE_COMPRESS_XZ
  endif # CONFIG_MODULE_COMPRESS
  export mod_compress_cmd

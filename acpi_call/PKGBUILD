@@ -9,6 +9,8 @@
 
 # enable/disable module signing
 _signing=1
+# enable/disable clang
+_clang=1
 
 _linuxprefix=linux54-vd
 _extramodules=extramodules-5.4-vd
@@ -37,7 +39,9 @@ build() {
   _kernver="$(cat /usr/lib/modules/${_extramodules}/version)"
 
   cd "${_pkgname}-${pkgver}"
-
+  if [[ ${_clang} -eq 1 ]]; then
+  	make CC=/opt/clang10/bin/clang HOSTCC=/opt/clang10/bin/clang KVERSION="${_kernver}"
+  fi
   make KVERSION="${_kernver}"
 }
 
@@ -50,7 +54,7 @@ package() {
   	echo -e "Signing modules with kernel key...\n"
   	sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/acpi_call.ko"
   fi
-  xz -T2 --lzma2=dict=2M "${pkgdir}"/usr/lib/modules/${_extramodules}/acpi_call.ko
+  xz -T2 -4 "${pkgdir}"/usr/lib/modules/${_extramodules}/acpi_call.ko
   echo acpi_call > "${pkgdir}"/usr/lib/modules-load.d/${pkgname}.conf
 
   install -dm 755 "${pkgdir}"/usr/share/${pkgname}

@@ -11,10 +11,10 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=18
+_sub=20
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
-pkgrel=2
+pkgrel=1
 _archpatch=20200203
 arch=('x86_64')
 url="http://www.kernel.org/"
@@ -28,9 +28,11 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		#
 		# ARCH Patches
 		0001-arch-patches-${_archpatch}.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/arch-patches-v24/0001-arch-patches.patch
+		#
 		# MANJARO Patches
 		0001-i2c-nuvoton-nc677x-hwmon-driver.patch
 		0002-amdgpu-nonupstream-navi10-vfio-reset.patch
+		#
 		# amdgpu
 		0001-amdgpu-sriov-vf-does-not-support-baco.patch
 		0002-amdgpu-fix-gfx-vf-flr-fail-on-navi.patch
@@ -43,17 +45,29 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0009-amdgpu-fix-gfx10-missing-csib-set.patch
 		0010-amdgpu-unlock-srbm-mutex.patch
 		0011-amdgpu-revert-dont-schedule-jobs-while-in-reset.patch
+		#
 		# BMQ scheduler
 		#0001-bmq-linux54-20200117.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r2.patch
+		#
 		# sirlucjan
-		0001-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0001-futex-Split-key-setup-from-key-queue-locking-and-rea.patch
-		0002-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0002-futex-Implement-mechanism-to-wait-on-any-of-several-.patch
-		0003-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0003-futex-Change-WAIT_MULTIPLE-opcode-to-31.patch
+		#0001-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0001-futex-Split-key-setup-from-key-queue-locking-and-rea.patch
+		#0002-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0002-futex-Implement-mechanism-to-wait-on-any-of-several-.patch
+		#0003-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-sep/0003-futex-Change-WAIT_MULTIPLE-opcode-to-31.patch
 		#0004-futex-steam-fsync.patch::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.4/futex-patches-v2/0001-futex-Add-support-for-multiple-keys-at-the-same-time.patch
+		#
+		# Clear Linux
 		0001-clearlinux-tweak-intel-cpuidle.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0106-intel_idle-tweak-cpuidle-cstates.patch
 		0002-clearlinux-add-config-opt-for-raid6-bench.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0109-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
 		0003-clearlinux-init-ata-before-graphics.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0110-Initialize-ata-before-graphics.patch
 		0004-clearlinux-rcu-nocb-fix-dump.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0052-rcu-nocb-Fix-dump_tree-hierarchy-print-always-active.patch
+		#
+		# steam futex
+		0001-futex-steam-fsync.patch::https://gitlab.collabora.com/tonyk/linux/commit/dc3e0456bf719cde7ce44e1beb49d4ad0e5f0c71.diff
+		0002-futex-steam-fsync.patch::https://gitlab.collabora.com/tonyk/linux/commit/714afdc15b847a7a33c5206b6e1ddf64697c07d6.diff
+		0003-futex-steam-fsync.patch::https://gitlab.collabora.com/tonyk/linux/commit/ec85ea95a00b490a059bcc817bc1b4660062dba0.diff
+		0004-futex-steam-fsync.patch::https://gitlab.collabora.com/tonyk/linux/commit/00d3ee9cff824d4d38e82d252e4300999f87f1a5.diff
+		0005-futex-steam-fsync.patch::https://gitlab.collabora.com/tonyk/linux/commit/e8d4d6ded8544b5716c66d326aa290db8501518c.diff
+		#
 		# vd
 		0001-tune-vm-and-vfs-settings.patch
 		0002-tune-cfs-scheduler.patch
@@ -61,12 +75,14 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0004-add-nvme-hwmon-temp.patch
 		0005-cpu-optimisations-graysky.patch
 		0006-tune-cpufreq-ondemand.patch
+		#
 		# hho
 		0001-enable-O3-opt-for-all-arches.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/kconfig-20191211-enable-O3-for-all-arches.patch
 		0002-mm-split-vmalloc_sync_all.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/mm-20191009-split-vmalloc_sync_all.patch
 		0003-introduce-list-for-each-continue.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/"list-20191129-introduce-list_for_each_continue().patch"
 		0004-block-perf-optimisations.patch
 		0005-net-disable-tcp-ssthresh-cache.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/net-20191209-disable-TCP-ssthresh-metrics-cache-by-default.patch
+		0006-pipe-56-backports.patch
 )
 
 validpgpkeys=(
@@ -74,7 +90,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('92e9f1fd69543e9ce2a9e6eb918823b1846d2dd99246a74456263cd5ad234d89'
+sha256sums=('793f6dcd9a7074dc61bbb092b40b3ce9567f776f21589ecd09f07bc9ed5c67bb'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
@@ -97,16 +113,18 @@ sha256sums=('92e9f1fd69543e9ce2a9e6eb918823b1846d2dd99246a74456263cd5ad234d89'
             '0eab1c053ddc6e8d70b906bd66c3ce8c90abbfb0b79eb053dfdb3740be1194ad'
             'e42809933e33e6a12df61ca158af41141216a1bdd4c011a748724206faee69ca'
             '74fe306e22754d8488d5354b21233c087d3f7975fa88a8ff85f8a5e1d1ec6855'
-            'fd1f34cf87e72ccd6070590028ad34e12dc42285637a0c61894680cb81d4fb88'
-            '9660f0d31bdc5718b7fde41015898f67dce86602886585848d6300dfce2542db'
-            'cd228e4b62cab5679c93cd0eda5d96d570f1b3ba84340eddd2d049f2a07eef9d'
             '88b5597753b01f90f77b99580943263969902ffc084972f8843e0659fdd5eb8f'
             '47d26eb8a2ec74b3684ab61837ecfcdad5cdc40722ca01a32684dfdd3775fafc'
             'b4a3d140bc93e4d224570c0f6b87c40c64148571588064858fcdc9f2406feeaa'
             '94b273be24a11dab3c77df0d3a061921d128bb57e78de87f3955049289110f81'
+            'aa1695e04042c12934ca39209c480cf7aeda4d3598b31f93d544687629185fb7'
+            '6ab9f154110c9e9ce343e41a7b9c5300e827e4e7d1f0de4eac07fa01db4dbc7d'
+            'ae6910e35ce63118262050a15260a0665bb70a03fb3aeca562b87b7c444838d5'
+            'e12dea05da5406bb04ecf0af40d2c8a588686f489e423434c2d266a291038125'
+            '20d9e8c26c5144ab3f20436b5f89a246b053ef14af5746fde649d49798ac2321'
             '725d6693af00daf0a1e2fe8042249dfd16b90bb3f72e5cb841b9e4f7b82e4b7d'
             '58fd33be8d9ab594a01f1da5858567ac7ce8d3e44e0f2f3682e9104c4fb07514'
-            '0d6fbf9a5206529d6791d41767ec254f0040d053713092b5fbb21fbe7f3604b7'
+            '1a17de048e3b81e041142bbb57cd098f842c92b7e6df0d9eeae72134761e5838'
             'c6944879f5cdfd335a3adc75b6f6194d127ad93d4dd5bf90d2ad505e83c9b6d2'
             '607097f22f202cd829f12acce7a401fb7f7af5678ffeda90c1fc7da71b895ad7'
             '97f59d09ef55ea8a3634ea426fdc5db0591f77cca14cfe2db49176f71af80037'
@@ -114,11 +132,12 @@ sha256sums=('92e9f1fd69543e9ce2a9e6eb918823b1846d2dd99246a74456263cd5ad234d89'
             '47844884e429ffc395f51610825271c2549d2ab28b52251407d5b4f8a21fe1d9'
             '7f9aa69187e7d197017c6bb15b623330e050a27ba384a3894cbd3e347fdd8a83'
             'b37b2132e97357201e039872c595da18aade6a64743d35ec33ebfd4d4851c3f4'
-            '9c006e4845c22808c954ca2374a2a9dd927c192e4bdaf0d00c6abc559831106e')
+            '9c006e4845c22808c954ca2374a2a9dd927c192e4bdaf0d00c6abc559831106e'
+            'bc257b6461aab4844d5ed5b8df219f0552149df93da021575ac7f00d6005cff5')
 
-export KBUILD_BUILD_USER=manjaro
-export KBUILD_BUILD_HOST=systemd-run
-_clang=0
+export KBUILD_BUILD_USER=systemd-run
+export KBUILD_BUILD_HOST=manjaro
+_clang=1
 
 if [[ ${_clang} -eq 1 ]]; then
 	export HOSTCC='/opt/clang10/bin/clang --target=x86_64-unknown-linux-gnu'

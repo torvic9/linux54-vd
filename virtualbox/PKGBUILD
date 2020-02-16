@@ -63,7 +63,7 @@ package_linux54-vd-virtualbox-host-modules(){
   		sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/$i"
   	done
   fi
-  find "$pkgdir" -name '*.ko' -exec xz -T2 --lzma2=dict=2M {} +
+  find "$pkgdir" -name '*.ko' -exec xz -T2 -4 {} +
   sed -i -e "s/EXTRAMODULES='.*'/EXTRAMODULES='$_extramodules'/" "$startdir/virtualbox-host-modules.install"
 
   mkdir -p "$pkgdir/etc/modules-load.d"
