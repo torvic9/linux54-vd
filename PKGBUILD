@@ -133,7 +133,7 @@ sha256sums=('6d23724e92c6a012a5cbb0deafdff81bdc03f6f9295e36259164cd431e465bfa'
 
 export KBUILD_BUILD_USER=systemd-run
 export KBUILD_BUILD_HOST=manjaro
-_clang=1
+_clang=0
 
 if [[ ${_clang} -eq 1 ]]; then
 	export HOSTCC='/opt/clang10/bin/clang --target=x86_64-unknown-linux-gnu'
