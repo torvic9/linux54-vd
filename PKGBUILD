@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=21
+_sub=22
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -55,7 +55,6 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0001-clearlinux-tweak-intel-cpuidle.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0106-intel_idle-tweak-cpuidle-cstates.patch
 		0002-clearlinux-add-config-opt-for-raid6-bench.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0109-raid6-add-Kconfig-option-to-skip-raid6-benchmarking.patch
 		0003-clearlinux-init-ata-before-graphics.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0110-Initialize-ata-before-graphics.patch
-		0004-clearlinux-rcu-nocb-fix-dump.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0052-rcu-nocb-Fix-dump_tree-hierarchy-print-always-active.patch
 		#
 		# steam futex
 		0001-futex-steam-fsync.patch::https://gitlab.collabora.com/tonyk/linux/commit/dc3e0456bf719cde7ce44e1beb49d4ad0e5f0c71.diff
@@ -86,7 +85,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('6d23724e92c6a012a5cbb0deafdff81bdc03f6f9295e36259164cd431e465bfa'
+sha256sums=('661bcb8d7e390dcc28e53795485e648f2bdc9b697b731459cc2bcc9ceb4a7d1a'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
@@ -112,7 +111,6 @@ sha256sums=('6d23724e92c6a012a5cbb0deafdff81bdc03f6f9295e36259164cd431e465bfa'
             '88b5597753b01f90f77b99580943263969902ffc084972f8843e0659fdd5eb8f'
             '47d26eb8a2ec74b3684ab61837ecfcdad5cdc40722ca01a32684dfdd3775fafc'
             'b4a3d140bc93e4d224570c0f6b87c40c64148571588064858fcdc9f2406feeaa'
-            '94b273be24a11dab3c77df0d3a061921d128bb57e78de87f3955049289110f81'
             'aa1695e04042c12934ca39209c480cf7aeda4d3598b31f93d544687629185fb7'
             '6ab9f154110c9e9ce343e41a7b9c5300e827e4e7d1f0de4eac07fa01db4dbc7d'
             'ae6910e35ce63118262050a15260a0665bb70a03fb3aeca562b87b7c444838d5'
