@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=23
+_sub=24
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -50,6 +50,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		#0001-bmq-linux54-20200117.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r2.patch
 		#
 		# sirlucjan
+		0001-kbuild-reuse-intermediate-linker-scripts::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.5/fixes-miscellaneous-v8-sep/0005-kbuild-reuse-intermediate-linker-scripts-in-the-fina.patch
 		#
 		# Clear Linux
 		0001-clearlinux-tweak-intel-cpuidle.patch::https://raw.githubusercontent.com/clearlinux-pkgs/linux/master/0106-intel_idle-tweak-cpuidle-cstates.patch
@@ -85,12 +86,12 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('3f28aacdf5deddfdf80bb949884699b96053a3548dc3434552d30dc0bc781eca'
+sha256sums=('7fa0ac784c78129beed43260a7a22a077f1041ac0e8e88647284d2cf7b1d7eb3'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
             'a8172dee5d960e1b2fece8d535a3c49f54e0f8e3e2fb52dd5075e54f86ad617b'
-            '04f4b1dabf507ebe5e7304a8cdcf490bc2c2620bb7d1e4244cbd4b18e0d6789f'
+            '9d4e288dc6d869f4ee06c4f07b54e01cb2b77755c8057b304a9f54a7f91487d7'
             '8f0ff11796e2495ddca1a45a38bbac13c87c1bf8d8e89f4bc495ca6993dad8f3'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
@@ -108,6 +109,7 @@ sha256sums=('3f28aacdf5deddfdf80bb949884699b96053a3548dc3434552d30dc0bc781eca'
             '0eab1c053ddc6e8d70b906bd66c3ce8c90abbfb0b79eb053dfdb3740be1194ad'
             'e42809933e33e6a12df61ca158af41141216a1bdd4c011a748724206faee69ca'
             '74fe306e22754d8488d5354b21233c087d3f7975fa88a8ff85f8a5e1d1ec6855'
+            '956157b645057bc6da3469b147198cece28ad3f29d9917f62aa136a67dfa6f2f'
             '88b5597753b01f90f77b99580943263969902ffc084972f8843e0659fdd5eb8f'
             '47d26eb8a2ec74b3684ab61837ecfcdad5cdc40722ca01a32684dfdd3775fafc'
             'b4a3d140bc93e4d224570c0f6b87c40c64148571588064858fcdc9f2406feeaa'
@@ -131,22 +133,14 @@ sha256sums=('3f28aacdf5deddfdf80bb949884699b96053a3548dc3434552d30dc0bc781eca'
 
 export KBUILD_BUILD_USER=systemd-run
 export KBUILD_BUILD_HOST=manjaro
-_clang=0
+_clang=1
 
 if [[ ${_clang} -eq 1 ]]; then
-	export HOSTCC='/opt/clang10/bin/clang --target=x86_64-unknown-linux-gnu'
-	export HOSTLD=/opt/clang10/bin/ld.lld
-	export HOSTAR=/opt/clang10/bin/llvm-ar
-	export CC='/opt/clang10/bin/clang --target=x86_64-unknown-linux-gnu'
-	export LD=/opt/clang10/bin/ld.lld
-	export AR=/opt/clang10/bin/llvm-ar
-	export AS=/opt/clang10/bin/llvm-as
-	export OBJCOPY=/opt/clang10/bin/llvm-objcopy
-	export OBJDUMP=/opt/clang10/bin/llvm-objdump
-	export STRIP=/opt/clang10/bin/llvm-strip
-	export NM=/opt/clang10/bin/llvm-nm
-	export RANLIB=/opt/clang10/bin/llvm-ranlib
-	CLANGOPTS="CC=/opt/clang10/bin/clang HOSTCC=/opt/clang10/bin/clang"
+	CLANGOPTS="CC=/opt/clang10/bin/clang HOSTCC=/opt/clang10/bin/clang \
+	HOSTLD=/opt/clang10/bin/ld.lld HOSTAR=/opt/clang10/bin/llvm-ar \
+	LD=/opt/clang10/bin/ld.lld AR=/opt/clang10/bin/llvm-ar AS=/opt/clang10/bin/llvm-as \
+	OBJCOPY=/opt/clang10/bin/llvm-objcopy OBJDUMP=/opt/clang10/bin/llvm-objdump \
+	STRIP=/opt/clang10/bin/llvm-strip NM=/opt/clang10/bin/llvm-nm RANLIB=/opt/clang10/bin/llvm-ranlib"
 fi
 
 prepare() {
@@ -198,16 +192,19 @@ prepare() {
   # add key
   printf '\n'
   msg2 "KERNEL KEY GENERATION"
-  read -p "---- Enter the full path to the key if you have one, else enter 'n': " UCHOICE
-  if [[ ${UCHOICE} != "n" ]]; then
-    if [[ -f ${UCHOICE} ]]; then
-      cat ${UCHOICE} > ./certs/vd54-kernel-key.pem || exit 2
+  read -p "---- Enter the full path to the full key if you have one, else enter 'n': " UCHOICE
+  read -p "---- Enter the full path to the public key, else enter 'n': " UCHOICE2
+  if [[ ${UCHOICE} != "n" || ${UCHOICE2} != "n" ]]; then
+    if [[ -f ${UCHOICE} && -f ${UCHOICE2} ]]; then
+ 	cat ${UCHOICE} > ./certs/vd54-kernel-key.pem || exit 2
+	cat ${UCHOICE2} > ./certs/vd54-kernel-pubkey.pem || exit 2
     else
-      echo "Path does not exist. Aborting..." ; exit 2
+	echo "Path does not exist. Aborting..." ; exit 2
     fi
   else
-	cat ../x509.genkey > ./certs/x509.genkey
+    cat ../x509.genkey > ./certs/x509.genkey
     sed -i 's/vd54\-kernel\-key/signing\_key/' ./.config || exit 2
+    sed -i 's/vd54\-kernel\-pubkey//' ./.config || exit 2
   fi
 
   if [ "${_kernelname}" != "" ]; then

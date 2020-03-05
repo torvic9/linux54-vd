@@ -10,7 +10,7 @@
 # enable/disable module signing
 _signing=1
 # enable/disable clang
-_clang=0
+_clang=1
 
 _linuxprefix=linux54-vd
 _extramodules=extramodules-5.4-vd
@@ -40,7 +40,7 @@ build() {
 
   cd "${_pkgname}-${pkgver}"
   if [[ ${_clang} -eq 1 ]]; then
-  	make CC=/opt/clang10/bin/clang HOSTCC=/opt/clang10/bin/clang KVERSION="${_kernver}"
+  	make CC=/opt/clang10/bin/clang HOSTCC=/opt/clang10/bin/clang LD=/opt/clang10/bin/ld.lld KVERSION="${_kernver}"
   else
   	make KVERSION="${_kernver}"
   fi
