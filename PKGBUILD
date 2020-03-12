@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=24
+_sub=25
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -23,7 +23,7 @@ makedepends=('xmlto' 'docbook-xsl' 'kmod' 'inetutils' 'bc' 'elfutils' 'git')
 options=('!strip')
 source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sign}
 		# the main kernel config files
-		'config.x86_64' 'config.vd' 'config.x200' 'config.x270' 'config.x570' 'x509.genkey' "${pkgbase}.preset"
+		'config.x86_64' 'config.vd' 'config.x200' 'config.x270' 'x509.genkey' "${pkgbase}.preset"
 		# Prepatch from stable-queue
 		#
 		# ARCH Patches
@@ -86,13 +86,12 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('7fa0ac784c78129beed43260a7a22a077f1041ac0e8e88647284d2cf7b1d7eb3'
+sha256sums=('c0ed974b088d84847aeca0ab99943918c472739db4480b263e75e8c19a025e25'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
             'a8172dee5d960e1b2fece8d535a3c49f54e0f8e3e2fb52dd5075e54f86ad617b'
             '9d4e288dc6d869f4ee06c4f07b54e01cb2b77755c8057b304a9f54a7f91487d7'
-            '8f0ff11796e2495ddca1a45a38bbac13c87c1bf8d8e89f4bc495ca6993dad8f3'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
             'dfe5f34a7a3f76c18cdb6a9bff1193b5f159536744d0524a881bc9fa7a6e0c8c'
@@ -174,17 +173,15 @@ prepare() {
   echo "---- Select configuration file:"
   echo "${TBOLD}1)${TNORMAL} Manjaro default"
   echo "${TBOLD}2)${TNORMAL} vd default"
-  echo "${TBOLD}3)${TNORMAL} x570"
-  echo "${TBOLD}4)${TNORMAL} x270"
-  echo "${TBOLD}5)${TNORMAL} x200"
+  echo "${TBOLD}3)${TNORMAL} x270"
+  echo "${TBOLD}4)${TNORMAL} x200"
   while true ; do
   	read -p "Enter number (1-5): " _config
 	  case ${_config} in
 		1) cat ../config.x86_64 > ./.config && break ;;
 		2) cat ../config.vd > ./.config && break ;;
-		3) cat ../config.x570 > ./.config && break ;;
-		4) cat ../config.x270 > ./.config && break ;;
-		5) cat ../config.x200 > ./.config && break ;;
+		3) cat ../config.x270 > ./.config && break ;;
+		4) cat ../config.x200 > ./.config && break ;;
 		*) echo "Please enter a number (1-5)!" && continue ;;
   	  esac
   done
