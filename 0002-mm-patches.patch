@@ -1,0 +1,1633 @@
+From: Alan Jenkins <alan.christopher.jenkins@gmail.com>
+To: linux-mm@kvack.org
+Cc: Vlastimil Babka <vbabka@suse.cz>, Mel Gorman <mgorman@techsingularity.net>,
+    linux-kernel@vger.kernel.org, Bharath Vedartham <linux.bhar@gmail.com>,
+    Alan Jenkins <alan.christopher.jenkins@gmail.com>
+Subject: [PATCH v2] mm: avoid inconsistent "boosts" when updating the high and low watermarks
+Date: Fri, 21 Jun 2019 16:31:07 +0100
+
+When setting the low and high watermarks we use min_wmark_pages(zone).
+I guess this was to reduce the line length.  Then this macro was modified
+to include zone->watermark_boost.  So we needed to set watermark_boost
+before we set the high and low watermarks... but we did not.
+
+It seems mostly harmless.  It might set the watermarks a bit higher than
+needed: when 1) the watermarks have been "boosted" and 2) you then
+triggered __setup_per_zone_wmarks() (by setting one of the sysctls, or
+hotplugging memory...).
+
+I noticed it because it also breaks the documented equality
+(high - low == low - min).  Below is an example of reproducing the bug.
+
+First sample.  Equality is met (high - low == low - min):
+
+Node 0, zone   Normal
+  pages free     11962
+        min      9531
+        low      11913
+        high     14295
+        spanned  1173504
+        present  1173504
+        managed  1134235
+
+A later sample.  Something has caused us to boost the watermarks:
+
+Node 0, zone   Normal
+  pages free     12614
+        min      10043
+        low      12425
+        high     14807
+
+Now trigger the watermarks to be recalculated.  "cd /proc/sys/vm" and
+"cat watermark_scale_factor > watermark_scale_factor".  Then the watermarks
+are boosted inconsistently.  The equality is broken:
+
+Node 0, zone   Normal
+  pages free     12412
+        min      9531
+        low      12425
+        high     14807
+
+14807 - 12425 = 2382
+12425 -  9531 = 2894
+
+Co-developed-by: Vlastimil Babka <vbabka@suse.cz>
+Signed-off-by: Vlastimil Babka <vbabka@suse.cz>
+Signed-off-by: Alan Jenkins <alan.christopher.jenkins@gmail.com>
+Fixes: 1c30844d2dfe ("mm: reclaim small amounts of memory when an external
+                      fragmentation event occurs")
+Acked-by: Mel Gorman <mgorman@techsingularity.net>
+
+---
+
+Changes since v1:
+
+Use Vlastimil's suggested code.  It is much cleaner, thanks :-).
+I considered this "Co-developed-by" and s-o-b credit.
+
+Update commit message to be specific about expected effects.
+
+Node data is always allocated with kzalloc().  So there is no risk of
+the code reading arbitrary unintialized data from ->watermark_boost,
+the first time it is run.
+
+AFAICT the bug is mostly harmless.  I do not require a -stable port.
+I leave it to anyone else, if they think it's worth adding
+"Cc: stable@vger.kernel.org".
+
+
+ mm/page_alloc.c | 10 ++++++----
+ 1 file changed, 6 insertions(+), 4 deletions(-)
+ 
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index c02cff1ed56e..01233705e490 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -7570,6 +7570,7 @@ static void __setup_per_zone_wmarks(void)
+ 
+ 	for_each_zone(zone) {
+ 		u64 tmp;
++		unsigned long wmark_min;
+ 
+ 		spin_lock_irqsave(&zone->lock, flags);
+ 		tmp = (u64)pages_min * zone_managed_pages(zone);
+@@ -7588,13 +7589,13 @@ static void __setup_per_zone_wmarks(void)
+ 
+ 			min_pages = zone_managed_pages(zone) / 1024;
+ 			min_pages = clamp(min_pages, SWAP_CLUSTER_MAX, 128UL);
+-			zone->_watermark[WMARK_MIN] = min_pages;
++			wmark_min = min_pages;
+ 		} else {
+ 			/*
+ 			 * If it's a lowmem zone, reserve a number of pages
+ 			 * proportionate to the zone's size.
+ 			 */
+-			zone->_watermark[WMARK_MIN] = tmp;
++			wmark_min = tmp;
+ 		}
+ 
+ 		/*
+@@ -7606,8 +7607,9 @@ static void __setup_per_zone_wmarks(void)
+ 			    mult_frac(zone_managed_pages(zone),
+ 				      watermark_scale_factor, 10000));
+ 
+-		zone->_watermark[WMARK_LOW]  = min_wmark_pages(zone) + tmp;
+-		zone->_watermark[WMARK_HIGH] = min_wmark_pages(zone) + tmp * 2;
++		zone->_watermark[WMARK_MIN]  = wmark_min;
++		zone->_watermark[WMARK_LOW]  = wmark_min + tmp;
++		zone->_watermark[WMARK_HIGH] = wmark_min + tmp * 2;
+ 		zone->watermark_boost = 0;
+ 
+ 		spin_unlock_irqrestore(&zone->lock, flags);
+From: "Uladzislau Rezki (Sony)" <urezki@gmail.com>
+Subject: mm/vmalloc: remove preempt_disable/enable when doing preloading
+Date: Sat, 30 Nov 2019 17:54:33 -0800
+
+Some background.  The preemption was disabled before to guarantee that a
+preloaded object is available for a CPU, it was stored for.  That was
+achieved by combining the disabling the preemption and taking the spin
+lock while the ne_fit_preload_node is checked.
+
+The aim was to not allocate in atomic context when spinlock is taken
+later, for regular vmap allocations.  But that approach conflicts with
+CONFIG_PREEMPT_RT philosophy.  It means that calling spin_lock() with
+disabled preemption is forbidden in the CONFIG_PREEMPT_RT kernel.
+
+Therefore, get rid of preempt_disable() and preempt_enable() when the
+preload is done for splitting purpose.  As a result we do not guarantee
+now that a CPU is preloaded, instead we minimize the case when it is
+not, with this change, by populating the per cpu preload pointer under
+the vmap_area_lock.
+
+This implies that at least each caller that has done the preallocation
+will not fallback to an atomic allocation later.  It is possible that
+the preallocation would be pointless or that no preallocation is done
+because of the race but the data shows that this is really rare.
+
+For example i run the special test case that follows the preload pattern
+and path.  20 "unbind" threads run it and each does 1000000 allocations.
+Only 3.5 times among 1000000 a CPU was not preloaded.  So it can happen
+but the number is negligible.
+
+[mhocko@suse.com: changelog additions]
+Link: http://lkml.kernel.org/r/20191016095438.12391-1-urezki@gmail.com
+Fixes: 82dd23e84be3 ("mm/vmalloc.c: preload a CPU with one object for split purpose")
+Signed-off-by: Uladzislau Rezki (Sony) <urezki@gmail.com>
+Reviewed-by: Steven Rostedt (VMware) <rostedt@goodmis.org>
+Acked-by: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Acked-by: Daniel Wagner <dwagner@suse.de>
+Acked-by: Michal Hocko <mhocko@suse.com>
+Cc: Hillf Danton <hdanton@sina.com>
+Cc: Matthew Wilcox <willy@infradead.org>
+Cc: Oleksiy Avramchenko <oleksiy.avramchenko@sonymobile.com>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ mm/vmalloc.c | 37 ++++++++++++++++++++-----------------
+ 1 file changed, 20 insertions(+), 17 deletions(-)
+
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index fad6d1d732b2..90517b4b21ef 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -1077,31 +1077,34 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
+ 
+ retry:
+ 	/*
+-	 * Preload this CPU with one extra vmap_area object to ensure
+-	 * that we have it available when fit type of free area is
+-	 * NE_FIT_TYPE.
++	 * Preload this CPU with one extra vmap_area object. It is used
++	 * when fit type of free area is NE_FIT_TYPE. Please note, it
++	 * does not guarantee that an allocation occurs on a CPU that
++	 * is preloaded, instead we minimize the case when it is not.
++	 * It can happen because of cpu migration, because there is a
++	 * race until the below spinlock is taken.
+ 	 *
+ 	 * The preload is done in non-atomic context, thus it allows us
+ 	 * to use more permissive allocation masks to be more stable under
+-	 * low memory condition and high memory pressure.
++	 * low memory condition and high memory pressure. In rare case,
++	 * if not preloaded, GFP_NOWAIT is used.
+ 	 *
+-	 * Even if it fails we do not really care about that. Just proceed
+-	 * as it is. "overflow" path will refill the cache we allocate from.
++	 * Set "pva" to NULL here, because of "retry" path.
+ 	 */
+-	preempt_disable();
+-	if (!__this_cpu_read(ne_fit_preload_node)) {
+-		preempt_enable();
+-		pva = kmem_cache_alloc_node(vmap_area_cachep, GFP_KERNEL, node);
+-		preempt_disable();
++	pva = NULL;
+ 
+-		if (__this_cpu_cmpxchg(ne_fit_preload_node, NULL, pva)) {
+-			if (pva)
+-				kmem_cache_free(vmap_area_cachep, pva);
+-		}
+-	}
++	if (!this_cpu_read(ne_fit_preload_node))
++		/*
++		 * Even if it fails we do not really care about that.
++		 * Just proceed as it is. If needed "overflow" path
++		 * will refill the cache we allocate from.
++		 */
++		pva = kmem_cache_alloc_node(vmap_area_cachep, GFP_KERNEL, node);
+ 
+ 	spin_lock(&vmap_area_lock);
+-	preempt_enable();
++
++	if (pva && __this_cpu_cmpxchg(ne_fit_preload_node, NULL, pva))
++		kmem_cache_free(vmap_area_cachep, pva);
+ 
+ 	/*
+ 	 * If an allocation fails, the "vend" address is
+From: "Uladzislau Rezki (Sony)" <urezki@gmail.com>
+Subject: mm/vmalloc: respect passed gfp_mask when doing preloading
+Date: Sat, 30 Nov 2019 17:54:37 -0800
+
+Allocation functions should comply with the given gfp_mask as much as
+possible.  The preallocation code in alloc_vmap_area doesn't follow that
+pattern and it is using a hardcoded GFP_KERNEL.  Although this doesn't
+really make much difference because vmalloc is not GFP_NOWAIT compliant
+in general (e.g.  page table allocations are GFP_KERNEL) there is no
+reason to spread that bad habit and it is good to fix the antipattern.
+
+[mhocko@suse.com: rewrite changelog]
+Link: http://lkml.kernel.org/r/20191016095438.12391-2-urezki@gmail.com
+Signed-off-by: Uladzislau Rezki (Sony) <urezki@gmail.com>
+Acked-by: Michal Hocko <mhocko@suse.com>
+Cc: Daniel Wagner <dwagner@suse.de>
+Cc: Hillf Danton <hdanton@sina.com>
+Cc: Matthew Wilcox <willy@infradead.org>
+Cc: Oleksiy Avramchenko <oleksiy.avramchenko@sonymobile.com>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Cc: Steven Rostedt <rostedt@goodmis.org>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ mm/vmalloc.c | 8 ++++----
+ 1 file changed, 4 insertions(+), 4 deletions(-)
+
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index 90517b4b21ef..b3bb50d07e27 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -1063,9 +1063,9 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
+ 		return ERR_PTR(-EBUSY);
+ 
+ 	might_sleep();
++	gfp_mask = gfp_mask & GFP_RECLAIM_MASK;
+ 
+-	va = kmem_cache_alloc_node(vmap_area_cachep,
+-			gfp_mask & GFP_RECLAIM_MASK, node);
++	va = kmem_cache_alloc_node(vmap_area_cachep, gfp_mask, node);
+ 	if (unlikely(!va))
+ 		return ERR_PTR(-ENOMEM);
+ 
+@@ -1073,7 +1073,7 @@ static struct vmap_area *alloc_vmap_area(unsigned long size,
+ 	 * Only scan the relevant parts containing pointers to other objects
+ 	 * to avoid false negatives.
+ 	 */
+-	kmemleak_scan_area(&va->rb_node, SIZE_MAX, gfp_mask & GFP_RECLAIM_MASK);
++	kmemleak_scan_area(&va->rb_node, SIZE_MAX, gfp_mask);
+ 
+ retry:
+ 	/*
+@@ -1099,7 +1099,7 @@ retry:
+ 		 * Just proceed as it is. If needed "overflow" path
+ 		 * will refill the cache we allocate from.
+ 		 */
+-		pva = kmem_cache_alloc_node(vmap_area_cachep, GFP_KERNEL, node);
++		pva = kmem_cache_alloc_node(vmap_area_cachep, gfp_mask, node);
+ 
+ 	spin_lock(&vmap_area_lock);
+ 
+From: "Uladzislau Rezki (Sony)" <urezki@gmail.com>
+Subject: mm/vmalloc: add more comments to the adjust_va_to_fit_type()
+Date: Sat, 30 Nov 2019 17:54:40 -0800
+
+When fit type is NE_FIT_TYPE there is a need in one extra object.
+Usually the "ne_fit_preload_node" per-CPU variable has it and there is
+no need in GFP_NOWAIT allocation, but there are exceptions.
+
+This commit just adds more explanations, as a result giving answers on
+questions like when it can occur, how often, under which conditions and
+what happens if GFP_NOWAIT gets failed.
+
+Link: http://lkml.kernel.org/r/20191016095438.12391-3-urezki@gmail.com
+Signed-off-by: Uladzislau Rezki (Sony) <urezki@gmail.com>
+Acked-by: Michal Hocko <mhocko@suse.com>
+Cc: Daniel Wagner <dwagner@suse.de>
+Cc: Sebastian Andrzej Siewior <bigeasy@linutronix.de>
+Cc: Thomas Gleixner <tglx@linutronix.de>
+Cc: Peter Zijlstra <peterz@infradead.org>
+Cc: Uladzislau Rezki <urezki@gmail.com>
+Cc: Hillf Danton <hdanton@sina.com>
+Cc: Michal Hocko <mhocko@suse.com>
+Cc: Matthew Wilcox <willy@infradead.org>
+Cc: Oleksiy Avramchenko <oleksiy.avramchenko@sonymobile.com>
+Cc: Steven Rostedt <rostedt@goodmis.org>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ mm/vmalloc.c | 13 +++++++++++++
+ 1 file changed, 13 insertions(+)
+
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index b3bb50d07e27..9bb6610f499b 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -968,6 +968,19 @@ adjust_va_to_fit_type(struct vmap_area *va,
+ 			 * There are a few exceptions though, as an example it is
+ 			 * a first allocation (early boot up) when we have "one"
+ 			 * big free space that has to be split.
++			 *
++			 * Also we can hit this path in case of regular "vmap"
++			 * allocations, if "this" current CPU was not preloaded.
++			 * See the comment in alloc_vmap_area() why. If so, then
++			 * GFP_NOWAIT is used instead to get an extra object for
++			 * split purpose. That is rare and most time does not
++			 * occur.
++			 *
++			 * What happens if an allocation gets failed. Basically,
++			 * an "overflow" path is triggered to purge lazily freed
++			 * areas to free some memory, then, the "retry" path is
++			 * triggered to repeat one more time. See more details
++			 * in alloc_vmap_area() function.
+ 			 */
+ 			lva = kmem_cache_alloc(vmap_area_cachep, GFP_NOWAIT);
+ 			if (!lva)
+From: "Uladzislau Rezki (Sony)" <urezki@gmail.com>
+Subject: mm/vmalloc: rework vmap_area_lock
+Date: Sat, 30 Nov 2019 17:54:47 -0800
+
+With the new allocation approach introduced in the 5.2 kernel, it
+becomes possible to get rid of one global spinlock.  By doing that we
+can further improve the KVA from the performance point of view.
+
+Basically we can have two independent locks, one for allocation part and
+another one for deallocation, because of two different entities: "free
+data structures" and "busy data structures".
+
+As a result, allocation/deallocation operations can still interfere
+between each other in case of running simultaneously on different CPUs,
+it means there is still dependency, but with two locks it becomes lower.
+
+Summarizing:
+  - it reduces the high lock contention
+  - it allows to perform operations on "free" and "busy"
+    trees in parallel on different CPUs. Please note it
+    does not solve scalability issue.
+
+Test results:
+
+In order to evaluate this patch, we can run "vmalloc test driver" to see
+how many CPU cycles it takes to complete all test cases running
+sequentially.  All online CPUs run it so it will cause a high lock
+contention.
+
+HiKey 960, ARM64, 8xCPUs, big.LITTLE:
+
+<snip>
+    sudo ./test_vmalloc.sh sequential_test_order=1
+<snip>
+
+<default>
+[  390.950557] All test took CPU0=457126382 cycles
+[  391.046690] All test took CPU1=454763452 cycles
+[  391.128586] All test took CPU2=454539334 cycles
+[  391.222669] All test took CPU3=455649517 cycles
+[  391.313946] All test took CPU4=388272196 cycles
+[  391.410425] All test took CPU5=384036264 cycles
+[  391.492219] All test took CPU6=387432964 cycles
+[  391.578433] All test took CPU7=387201996 cycles
+<default>
+
+<patched>
+[  304.721224] All test took CPU0=391521310 cycles
+[  304.821219] All test took CPU1=393533002 cycles
+[  304.917120] All test took CPU2=392243032 cycles
+[  305.008986] All test took CPU3=392353853 cycles
+[  305.108944] All test took CPU4=297630721 cycles
+[  305.196406] All test took CPU5=297548736 cycles
+[  305.288602] All test took CPU6=297092392 cycles
+[  305.381088] All test took CPU7=297293597 cycles
+<patched>
+
+~14%-23% patched variant is better.
+
+Link: http://lkml.kernel.org/r/20191022155800.20468-1-urezki@gmail.com
+Signed-off-by: Uladzislau Rezki (Sony) <urezki@gmail.com>
+Acked-by: Andrew Morton <akpm@linux-foundation.org>
+Cc: Hillf Danton <hdanton@sina.com>
+Cc: Michal Hocko <mhocko@suse.com>
+Cc: Matthew Wilcox <willy@infradead.org>
+Cc: Oleksiy Avramchenko <oleksiy.avramchenko@sonymobile.com>
+Cc: Steven Rostedt <rostedt@goodmis.org>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ mm/vmalloc.c | 80 +++++++++++++++++++++++++++++++++++++-----------------------
+ 1 file changed, 50 insertions(+), 30 deletions(-)
+
+diff --git a/mm/vmalloc.c b/mm/vmalloc.c
+index 9bb6610f499b..33e245ebe70c 100644
+--- a/mm/vmalloc.c
++++ b/mm/vmalloc.c
+@@ -331,6 +331,7 @@ EXPORT_SYMBOL(vmalloc_to_pfn);
+ 
+ 
+ static DEFINE_SPINLOCK(vmap_area_lock);
++static DEFINE_SPINLOCK(free_vmap_area_lock);
+ /* Export for kexec only */
+ LIST_HEAD(vmap_area_list);
+ static LLIST_HEAD(vmap_purge_list);
+@@ -1114,7 +1115,7 @@ retry:
+ 		 */
+ 		pva = kmem_cache_alloc_node(vmap_area_cachep, gfp_mask, node);
+ 
+-	spin_lock(&vmap_area_lock);
++	spin_lock(&free_vmap_area_lock);
+ 
+ 	if (pva && __this_cpu_cmpxchg(ne_fit_preload_node, NULL, pva))
+ 		kmem_cache_free(vmap_area_cachep, pva);
+@@ -1124,14 +1125,17 @@ retry:
+ 	 * returned. Therefore trigger the overflow path.
+ 	 */
+ 	addr = __alloc_vmap_area(size, align, vstart, vend);
++	spin_unlock(&free_vmap_area_lock);
++
+ 	if (unlikely(addr == vend))
+ 		goto overflow;
+ 
+ 	va->va_start = addr;
+ 	va->va_end = addr + size;
+ 	va->vm = NULL;
+-	insert_vmap_area(va, &vmap_area_root, &vmap_area_list);
+ 
++	spin_lock(&vmap_area_lock);
++	insert_vmap_area(va, &vmap_area_root, &vmap_area_list);
+ 	spin_unlock(&vmap_area_lock);
+ 
+ 	BUG_ON(!IS_ALIGNED(va->va_start, align));
+@@ -1141,7 +1145,6 @@ retry:
+ 	return va;
+ 
+ overflow:
+-	spin_unlock(&vmap_area_lock);
+ 	if (!purged) {
+ 		purge_vmap_area_lazy();
+ 		purged = 1;
+@@ -1177,28 +1180,25 @@ int unregister_vmap_purge_notifier(struct notifier_block *nb)
+ }
+ EXPORT_SYMBOL_GPL(unregister_vmap_purge_notifier);
+ 
+-static void __free_vmap_area(struct vmap_area *va)
++/*
++ * Free a region of KVA allocated by alloc_vmap_area
++ */
++static void free_vmap_area(struct vmap_area *va)
+ {
+ 	/*
+ 	 * Remove from the busy tree/list.
+ 	 */
++	spin_lock(&vmap_area_lock);
+ 	unlink_va(va, &vmap_area_root);
++	spin_unlock(&vmap_area_lock);
+ 
+ 	/*
+-	 * Merge VA with its neighbors, otherwise just add it.
++	 * Insert/Merge it back to the free tree/list.
+ 	 */
++	spin_lock(&free_vmap_area_lock);
+ 	merge_or_add_vmap_area(va,
+ 		&free_vmap_area_root, &free_vmap_area_list);
+-}
+-
+-/*
+- * Free a region of KVA allocated by alloc_vmap_area
+- */
+-static void free_vmap_area(struct vmap_area *va)
+-{
+-	spin_lock(&vmap_area_lock);
+-	__free_vmap_area(va);
+-	spin_unlock(&vmap_area_lock);
++	spin_unlock(&free_vmap_area_lock);
+ }
+ 
+ /*
+@@ -1291,7 +1291,7 @@ static bool __purge_vmap_area_lazy(unsigned long start, unsigned long end)
+ 	flush_tlb_kernel_range(start, end);
+ 	resched_threshold = lazy_max_pages() << 1;
+ 
+-	spin_lock(&vmap_area_lock);
++	spin_lock(&free_vmap_area_lock);
+ 	llist_for_each_entry_safe(va, n_va, valist, purge_list) {
+ 		unsigned long nr = (va->va_end - va->va_start) >> PAGE_SHIFT;
+ 
+@@ -1306,9 +1306,9 @@ static bool __purge_vmap_area_lazy(unsigned long start, unsigned long end)
+ 		atomic_long_sub(nr, &vmap_lazy_nr);
+ 
+ 		if (atomic_long_read(&vmap_lazy_nr) < resched_threshold)
+-			cond_resched_lock(&vmap_area_lock);
++			cond_resched_lock(&free_vmap_area_lock);
+ 	}
+-	spin_unlock(&vmap_area_lock);
++	spin_unlock(&free_vmap_area_lock);
+ 	return true;
+ }
+ 
+@@ -2030,15 +2030,21 @@ int map_vm_area(struct vm_struct *area, pgprot_t prot, struct page **pages)
+ }
+ EXPORT_SYMBOL_GPL(map_vm_area);
+ 
+-static void setup_vmalloc_vm(struct vm_struct *vm, struct vmap_area *va,
+-			      unsigned long flags, const void *caller)
++static inline void setup_vmalloc_vm_locked(struct vm_struct *vm,
++	struct vmap_area *va, unsigned long flags, const void *caller)
+ {
+-	spin_lock(&vmap_area_lock);
+ 	vm->flags = flags;
+ 	vm->addr = (void *)va->va_start;
+ 	vm->size = va->va_end - va->va_start;
+ 	vm->caller = caller;
+ 	va->vm = vm;
++}
++
++static void setup_vmalloc_vm(struct vm_struct *vm, struct vmap_area *va,
++			      unsigned long flags, const void *caller)
++{
++	spin_lock(&vmap_area_lock);
++	setup_vmalloc_vm_locked(vm, va, flags, caller);
+ 	spin_unlock(&vmap_area_lock);
+ }
+ 
+@@ -3298,7 +3304,7 @@ struct vm_struct **pcpu_get_vm_areas(const unsigned long *offsets,
+ 			goto err_free;
+ 	}
+ retry:
+-	spin_lock(&vmap_area_lock);
++	spin_lock(&free_vmap_area_lock);
+ 
+ 	/* start scanning - we scan from the top, begin with the last area */
+ 	area = term_area = last_area;
+@@ -3380,29 +3386,38 @@ retry:
+ 		va = vas[area];
+ 		va->va_start = start;
+ 		va->va_end = start + size;
+-
+-		insert_vmap_area(va, &vmap_area_root, &vmap_area_list);
+ 	}
+ 
+-	spin_unlock(&vmap_area_lock);
++	spin_unlock(&free_vmap_area_lock);
+ 
+ 	/* insert all vm's */
+-	for (area = 0; area < nr_vms; area++)
+-		setup_vmalloc_vm(vms[area], vas[area], VM_ALLOC,
++	spin_lock(&vmap_area_lock);
++	for (area = 0; area < nr_vms; area++) {
++		insert_vmap_area(vas[area], &vmap_area_root, &vmap_area_list);
++
++		setup_vmalloc_vm_locked(vms[area], vas[area], VM_ALLOC,
+ 				 pcpu_get_vm_areas);
++	}
++	spin_unlock(&vmap_area_lock);
+ 
+ 	kfree(vas);
+ 	return vms;
+ 
+ recovery:
+-	/* Remove previously inserted areas. */
++	/*
++	 * Remove previously allocated areas. There is no
++	 * need in removing these areas from the busy tree,
++	 * because they are inserted only on the final step
++	 * and when pcpu_get_vm_areas() is success.
++	 */
+ 	while (area--) {
+-		__free_vmap_area(vas[area]);
++		merge_or_add_vmap_area(vas[area],
++			&free_vmap_area_root, &free_vmap_area_list);
+ 		vas[area] = NULL;
+ 	}
+ 
+ overflow:
+-	spin_unlock(&vmap_area_lock);
++	spin_unlock(&free_vmap_area_lock);
+ 	if (!purged) {
+ 		purge_vmap_area_lazy();
+ 		purged = true;
+@@ -3453,9 +3468,12 @@ void pcpu_free_vm_areas(struct vm_struct **vms, int nr_vms)
+ 
+ #ifdef CONFIG_PROC_FS
+ static void *s_start(struct seq_file *m, loff_t *pos)
++	__acquires(&vmap_purge_lock)
+ 	__acquires(&vmap_area_lock)
+ {
++	mutex_lock(&vmap_purge_lock);
+ 	spin_lock(&vmap_area_lock);
++
+ 	return seq_list_start(&vmap_area_list, *pos);
+ }
+ 
+@@ -3465,8 +3483,10 @@ static void *s_next(struct seq_file *m, void *p, loff_t *pos)
+ }
+ 
+ static void s_stop(struct seq_file *m, void *p)
++	__releases(&vmap_purge_lock)
+ 	__releases(&vmap_area_lock)
+ {
++	mutex_unlock(&vmap_purge_lock);
+ 	spin_unlock(&vmap_area_lock);
+ }
+ 
+From: Shakeel Butt <shakeelb@google.com>
+Subject: mm: vmscan: memcontrol: remove mem_cgroup_select_victim_node()
+Date: Sat, 30 Nov 2019 17:50:16 -0800
+
+Since commit 1ba6fc9af35b ("mm: vmscan: do not share cgroup iteration
+between reclaimers"), the memcg reclaim does not bail out earlier based
+on sc->nr_reclaimed and will traverse all the nodes.  All the
+reclaimable pages of the memcg on all the nodes will be scanned relative
+to the reclaim priority.  So, there is no need to maintain state
+regarding which node to start the memcg reclaim from.
+
+This patch effectively reverts the commit 889976dbcb12 ("memcg: reclaim
+memory from nodes in round-robin order") and commit 453a9bf347f1
+("memcg: fix numa scan information update to be triggered by memory
+event").
+
+[shakeelb@google.com: v2]
+  Link: http://lkml.kernel.org/r/20191030204232.139424-1-shakeelb@google.com
+Link: http://lkml.kernel.org/r/20191029234753.224143-1-shakeelb@google.com
+Signed-off-by: Shakeel Butt <shakeelb@google.com>
+Acked-by: Roman Gushchin <guro@fb.com>
+Acked-by: Michal Hocko <mhocko@suse.com>
+Acked-by: Johannes Weiner <hannes@cmpxchg.org>
+Cc: Greg Thelen <gthelen@google.com>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ include/linux/memcontrol.h |   8 ----
+ mm/memcontrol.c            | 112 ---------------------------------------------
+ mm/vmscan.c                |  14 ++----
+ 3 files changed, 5 insertions(+), 129 deletions(-)
+
+diff --git a/include/linux/memcontrol.h b/include/linux/memcontrol.h
+index e82928deea88..239e752a7817 100644
+--- a/include/linux/memcontrol.h
++++ b/include/linux/memcontrol.h
+@@ -80,7 +80,6 @@ struct mem_cgroup_id {
+ enum mem_cgroup_events_target {
+ 	MEM_CGROUP_TARGET_THRESH,
+ 	MEM_CGROUP_TARGET_SOFTLIMIT,
+-	MEM_CGROUP_TARGET_NUMAINFO,
+ 	MEM_CGROUP_NTARGETS,
+ };
+ 
+@@ -312,13 +311,6 @@ struct mem_cgroup {
+ 	struct list_head kmem_caches;
+ #endif
+ 
+-	int last_scanned_node;
+-#if MAX_NUMNODES > 1
+-	nodemask_t	scan_nodes;
+-	atomic_t	numainfo_events;
+-	atomic_t	numainfo_updating;
+-#endif
+-
+ #ifdef CONFIG_CGROUP_WRITEBACK
+ 	struct list_head cgwb_list;
+ 	struct wb_domain cgwb_domain;
+diff --git a/mm/memcontrol.c b/mm/memcontrol.c
+index 94a5b6d831f9..529e12a59131 100644
+--- a/mm/memcontrol.c
++++ b/mm/memcontrol.c
+@@ -108,7 +108,6 @@ static const char *const mem_cgroup_lru_names[] = {
+ 
+ #define THRESHOLDS_EVENTS_TARGET 128
+ #define SOFTLIMIT_EVENTS_TARGET 1024
+-#define NUMAINFO_EVENTS_TARGET	1024
+ 
+ /*
+  * Cgroups above their limits are maintained in a RB-Tree, independent of
+@@ -877,9 +876,6 @@ static bool mem_cgroup_event_ratelimit(struct mem_cgroup *memcg,
+ 		case MEM_CGROUP_TARGET_SOFTLIMIT:
+ 			next = val + SOFTLIMIT_EVENTS_TARGET;
+ 			break;
+-		case MEM_CGROUP_TARGET_NUMAINFO:
+-			next = val + NUMAINFO_EVENTS_TARGET;
+-			break;
+ 		default:
+ 			break;
+ 		}
+@@ -899,21 +895,12 @@ static void memcg_check_events(struct mem_cgroup *memcg, struct page *page)
+ 	if (unlikely(mem_cgroup_event_ratelimit(memcg,
+ 						MEM_CGROUP_TARGET_THRESH))) {
+ 		bool do_softlimit;
+-		bool do_numainfo __maybe_unused;
+ 
+ 		do_softlimit = mem_cgroup_event_ratelimit(memcg,
+ 						MEM_CGROUP_TARGET_SOFTLIMIT);
+-#if MAX_NUMNODES > 1
+-		do_numainfo = mem_cgroup_event_ratelimit(memcg,
+-						MEM_CGROUP_TARGET_NUMAINFO);
+-#endif
+ 		mem_cgroup_threshold(memcg);
+ 		if (unlikely(do_softlimit))
+ 			mem_cgroup_update_tree(memcg, page);
+-#if MAX_NUMNODES > 1
+-		if (unlikely(do_numainfo))
+-			atomic_inc(&memcg->numainfo_events);
+-#endif
+ 	}
+ }
+ 
+@@ -1591,104 +1578,6 @@ static bool mem_cgroup_out_of_memory(struct mem_cgroup *memcg, gfp_t gfp_mask,
+ 	return ret;
+ }
+ 
+-#if MAX_NUMNODES > 1
+-
+-/**
+- * test_mem_cgroup_node_reclaimable
+- * @memcg: the target memcg
+- * @nid: the node ID to be checked.
+- * @noswap : specify true here if the user wants flle only information.
+- *
+- * This function returns whether the specified memcg contains any
+- * reclaimable pages on a node. Returns true if there are any reclaimable
+- * pages in the node.
+- */
+-static bool test_mem_cgroup_node_reclaimable(struct mem_cgroup *memcg,
+-		int nid, bool noswap)
+-{
+-	struct lruvec *lruvec = mem_cgroup_lruvec(NODE_DATA(nid), memcg);
+-
+-	if (lruvec_page_state(lruvec, NR_INACTIVE_FILE) ||
+-	    lruvec_page_state(lruvec, NR_ACTIVE_FILE))
+-		return true;
+-	if (noswap || !total_swap_pages)
+-		return false;
+-	if (lruvec_page_state(lruvec, NR_INACTIVE_ANON) ||
+-	    lruvec_page_state(lruvec, NR_ACTIVE_ANON))
+-		return true;
+-	return false;
+-
+-}
+-
+-/*
+- * Always updating the nodemask is not very good - even if we have an empty
+- * list or the wrong list here, we can start from some node and traverse all
+- * nodes based on the zonelist. So update the list loosely once per 10 secs.
+- *
+- */
+-static void mem_cgroup_may_update_nodemask(struct mem_cgroup *memcg)
+-{
+-	int nid;
+-	/*
+-	 * numainfo_events > 0 means there was at least NUMAINFO_EVENTS_TARGET
+-	 * pagein/pageout changes since the last update.
+-	 */
+-	if (!atomic_read(&memcg->numainfo_events))
+-		return;
+-	if (atomic_inc_return(&memcg->numainfo_updating) > 1)
+-		return;
+-
+-	/* make a nodemask where this memcg uses memory from */
+-	memcg->scan_nodes = node_states[N_MEMORY];
+-
+-	for_each_node_mask(nid, node_states[N_MEMORY]) {
+-
+-		if (!test_mem_cgroup_node_reclaimable(memcg, nid, false))
+-			node_clear(nid, memcg->scan_nodes);
+-	}
+-
+-	atomic_set(&memcg->numainfo_events, 0);
+-	atomic_set(&memcg->numainfo_updating, 0);
+-}
+-
+-/*
+- * Selecting a node where we start reclaim from. Because what we need is just
+- * reducing usage counter, start from anywhere is O,K. Considering
+- * memory reclaim from current node, there are pros. and cons.
+- *
+- * Freeing memory from current node means freeing memory from a node which
+- * we'll use or we've used. So, it may make LRU bad. And if several threads
+- * hit limits, it will see a contention on a node. But freeing from remote
+- * node means more costs for memory reclaim because of memory latency.
+- *
+- * Now, we use round-robin. Better algorithm is welcomed.
+- */
+-int mem_cgroup_select_victim_node(struct mem_cgroup *memcg)
+-{
+-	int node;
+-
+-	mem_cgroup_may_update_nodemask(memcg);
+-	node = memcg->last_scanned_node;
+-
+-	node = next_node_in(node, memcg->scan_nodes);
+-	/*
+-	 * mem_cgroup_may_update_nodemask might have seen no reclaimmable pages
+-	 * last time it really checked all the LRUs due to rate limiting.
+-	 * Fallback to the current node in that case for simplicity.
+-	 */
+-	if (unlikely(node == MAX_NUMNODES))
+-		node = numa_node_id();
+-
+-	memcg->last_scanned_node = node;
+-	return node;
+-}
+-#else
+-int mem_cgroup_select_victim_node(struct mem_cgroup *memcg)
+-{
+-	return 0;
+-}
+-#endif
+-
+ static int mem_cgroup_soft_reclaim(struct mem_cgroup *root_memcg,
+ 				   pg_data_t *pgdat,
+ 				   gfp_t gfp_mask,
+@@ -5073,7 +4962,6 @@ static struct mem_cgroup *mem_cgroup_alloc(void)
+ 		goto fail;
+ 
+ 	INIT_WORK(&memcg->high_work, high_work_func);
+-	memcg->last_scanned_node = MAX_NUMNODES;
+ 	INIT_LIST_HEAD(&memcg->oom_notify);
+ 	mutex_init(&memcg->thresholds_lock);
+ 	spin_lock_init(&memcg->move_lock);
+diff --git a/mm/vmscan.c b/mm/vmscan.c
+index ee4eecc7e1c2..2beff0e0dc7b 100644
+--- a/mm/vmscan.c
++++ b/mm/vmscan.c
+@@ -3348,10 +3348,8 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
+ 					   gfp_t gfp_mask,
+ 					   bool may_swap)
+ {
+-	struct zonelist *zonelist;
+ 	unsigned long nr_reclaimed;
+ 	unsigned long pflags;
+-	int nid;
+ 	unsigned int noreclaim_flag;
+ 	struct scan_control sc = {
+ 		.nr_to_reclaim = max(nr_pages, SWAP_CLUSTER_MAX),
+@@ -3364,16 +3362,14 @@ unsigned long try_to_free_mem_cgroup_pages(struct mem_cgroup *memcg,
+ 		.may_unmap = 1,
+ 		.may_swap = may_swap,
+ 	};
+-
+-	set_task_reclaim_state(current, &sc.reclaim_state);
+ 	/*
+-	 * Unlike direct reclaim via alloc_pages(), memcg's reclaim doesn't
+-	 * take care of from where we get pages. So the node where we start the
+-	 * scan does not need to be the current node.
++	 * Traverse the ZONELIST_FALLBACK zonelist of the current node to put
++	 * equal pressure on all the nodes. This is based on the assumption that
++	 * the reclaim does not bail out early.
+ 	 */
+-	nid = mem_cgroup_select_victim_node(memcg);
++	struct zonelist *zonelist = node_zonelist(numa_node_id(), sc.gfp_mask);
+ 
+-	zonelist = &NODE_DATA(nid)->node_zonelists[ZONELIST_FALLBACK];
++	set_task_reclaim_state(current, &sc.reclaim_state);
+ 
+ 	trace_mm_vmscan_memcg_reclaim_begin(0, sc.gfp_mask);
+ 
+From: Wen Yang <wenyang@linux.alibaba.com>
+Subject: mm/page-writeback.c: improve arithmetic divisions
+Date: Mon, 13 Jan 2020 16:29:29 -0800
+
+Use div64_ul() instead of do_div() if the divisor is unsigned long, to
+avoid truncation to 32-bit on 64-bit platforms.
+
+Link: http://lkml.kernel.org/r/20200102081442.8273-4-wenyang@linux.alibaba.com
+Signed-off-by: Wen Yang <wenyang@linux.alibaba.com>
+Reviewed-by: Andrew Morton <akpm@linux-foundation.org>
+Cc: Qian Cai <cai@lca.pw>
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Jens Axboe <axboe@kernel.dk>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ mm/page-writeback.c | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/mm/page-writeback.c b/mm/page-writeback.c
+index c74c6bd6540b..2caf780a42e7 100644
+--- a/mm/page-writeback.c
++++ b/mm/page-writeback.c
+@@ -1102,7 +1102,7 @@ static void wb_update_write_bandwidth(struct bdi_writeback *wb,
+ 	bw = written - min(written, wb->written_stamp);
+ 	bw *= HZ;
+ 	if (unlikely(elapsed > period)) {
+-		do_div(bw, elapsed);
++		bw = div64_ul(bw, elapsed);
+ 		avg = bw;
+ 		goto out;
+ 	}
+From: Wen Yang <wenyang@linux.alibaba.com>
+Subject: mm/page-writeback.c: use div64_ul() for u64-by-unsigned-long divide
+Date: Mon, 13 Jan 2020 16:29:26 -0800
+
+The two variables 'numerator' and 'denominator', though they are
+declared as long, they should actually be unsigned long (according to
+the implementation of the fprop_fraction_percpu() function)
+
+And do_div() does a 64-by-32 division, while the divisor 'denominator'
+is unsigned long, thus 64-bit on 64-bit platforms.  Hence the proper
+function to call is div64_ul().
+
+Link: http://lkml.kernel.org/r/20200102081442.8273-3-wenyang@linux.alibaba.com
+Signed-off-by: Wen Yang <wenyang@linux.alibaba.com>
+Reviewed-by: Andrew Morton <akpm@linux-foundation.org>
+Cc: Qian Cai <cai@lca.pw>
+Cc: Tejun Heo <tj@kernel.org>
+Cc: Jens Axboe <axboe@kernel.dk>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ mm/page-writeback.c | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/mm/page-writeback.c b/mm/page-writeback.c
+index 2d658b208319..c74c6bd6540b 100644
+--- a/mm/page-writeback.c
++++ b/mm/page-writeback.c
+@@ -766,7 +766,7 @@ static unsigned long __wb_calc_thresh(struct dirty_throttle_control *dtc)
+ 	struct wb_domain *dom = dtc_dom(dtc);
+ 	unsigned long thresh = dtc->thresh;
+ 	u64 wb_thresh;
+-	long numerator, denominator;
++	unsigned long numerator, denominator;
+ 	unsigned long wb_min_ratio, wb_max_ratio;
+ 
+ 	/*
+@@ -777,7 +777,7 @@ static unsigned long __wb_calc_thresh(struct dirty_throttle_control *dtc)
+ 
+ 	wb_thresh = (thresh * (100 - bdi_min_ratio)) / 100;
+ 	wb_thresh *= numerator;
+-	do_div(wb_thresh, denominator);
++	wb_thresh = div64_ul(wb_thresh, denominator);
+ 
+ 	wb_min_max_ratio(dtc->wb, &wb_min_ratio, &wb_max_ratio);
+ 
+From: Ira Weiny <ira.weiny@intel.com>
+Subject: mm/filemap.c: clean up filemap_write_and_wait()
+Date: Thu, 30 Jan 2020 22:12:07 -0800
+
+At some point filemap_write_and_wait() and
+filemap_write_and_wait_range() got the exact same implementation with
+the exception of the range being specified in *_range()
+
+Similar to other functions in fs.h which call *_range(..., 0,
+LLONG_MAX), change filemap_write_and_wait() to be a static inline which
+calls filemap_write_and_wait_range()
+
+Link: http://lkml.kernel.org/r/20191129160713.30892-1-ira.weiny@intel.com
+Signed-off-by: Ira Weiny <ira.weiny@intel.com>
+Reviewed-by: Nikolay Borisov <nborisov@suse.com>
+Reviewed-by: Matthew Wilcox (Oracle) <willy@infradead.org>
+Signed-off-by: Andrew Morton <akpm@linux-foundation.org>
+Signed-off-by: Linus Torvalds <torvalds@linux-foundation.org>
+---
+ include/linux/fs.h |  6 +++++-
+ mm/filemap.c       | 34 ++++++----------------------------
+ 2 files changed, 11 insertions(+), 29 deletions(-)
+
+diff --git a/include/linux/fs.h b/include/linux/fs.h
+index 40be2ccb87f3..41584f50af0d 100644
+--- a/include/linux/fs.h
++++ b/include/linux/fs.h
+@@ -2737,7 +2737,6 @@ static inline int filemap_fdatawait(struct address_space *mapping)
+ 
+ extern bool filemap_range_has_page(struct address_space *, loff_t lstart,
+ 				  loff_t lend);
+-extern int filemap_write_and_wait(struct address_space *mapping);
+ extern int filemap_write_and_wait_range(struct address_space *mapping,
+ 				        loff_t lstart, loff_t lend);
+ extern int __filemap_fdatawrite_range(struct address_space *mapping,
+@@ -2747,6 +2746,11 @@ extern int filemap_fdatawrite_range(struct address_space *mapping,
+ extern int filemap_check_errors(struct address_space *mapping);
+ extern void __filemap_set_wb_err(struct address_space *mapping, int err);
+ 
++static inline int filemap_write_and_wait(struct address_space *mapping)
++{
++	return filemap_write_and_wait_range(mapping, 0, LLONG_MAX);
++}
++
+ extern int __must_check file_fdatawait_range(struct file *file, loff_t lstart,
+ 						loff_t lend);
+ extern int __must_check file_check_and_advance_wb_err(struct file *file);
+diff --git a/mm/filemap.c b/mm/filemap.c
+index bf6aa30be58d..1784478270e1 100644
+--- a/mm/filemap.c
++++ b/mm/filemap.c
+@@ -632,33 +632,6 @@ static bool mapping_needs_writeback(struct address_space *mapping)
+ 	return mapping->nrpages;
+ }
+ 
+-int filemap_write_and_wait(struct address_space *mapping)
+-{
+-	int err = 0;
+-
+-	if (mapping_needs_writeback(mapping)) {
+-		err = filemap_fdatawrite(mapping);
+-		/*
+-		 * Even if the above returned error, the pages may be
+-		 * written partially (e.g. -ENOSPC), so we wait for it.
+-		 * But the -EIO is special case, it may indicate the worst
+-		 * thing (e.g. bug) happened, so we avoid waiting for it.
+-		 */
+-		if (err != -EIO) {
+-			int err2 = filemap_fdatawait(mapping);
+-			if (!err)
+-				err = err2;
+-		} else {
+-			/* Clear any previously stored errors */
+-			filemap_check_errors(mapping);
+-		}
+-	} else {
+-		err = filemap_check_errors(mapping);
+-	}
+-	return err;
+-}
+-EXPORT_SYMBOL(filemap_write_and_wait);
+-
+ /**
+  * filemap_write_and_wait_range - write out & wait on a file range
+  * @mapping:	the address_space for the pages
+@@ -680,7 +653,12 @@ int filemap_write_and_wait_range(struct address_space *mapping,
+ 	if (mapping_needs_writeback(mapping)) {
+ 		err = __filemap_fdatawrite_range(mapping, lstart, lend,
+ 						 WB_SYNC_ALL);
+-		/* See comment of filemap_write_and_wait() */
++		/*
++		 * Even if the above returned error, the pages may be
++		 * written partially (e.g. -ENOSPC), so we wait for it.
++		 * But the -EIO is special case, it may indicate the worst
++		 * thing (e.g. bug) happened, so we avoid waiting for it.
++		 */
+ 		if (err != -EIO) {
+ 			int err2 = filemap_fdatawait_range(mapping,
+ 						lstart, lend);
+From: Nitin Gupta <nigupta-DDmLM1+adcrQT0dZR+AlfA@public.gmane.org>
+To: Mel Gorman <mgorman-3eNAlZScCAx27rWaFMvyedHuzzzSOjJt@public.gmane.org>,
+	Michal Hocko <mhocko-IBi9RG/b67k@public.gmane.org>, Vlastimil Babka
+	<vbabka-AlSwsSmVLrQ@public.gmane.org>
+Cc: Matthew Wilcox <willy-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org>,
+	Andrew Morton <akpm-de/tnXTf+JLsfHDXvbKv3WD2FQJk+8+b@public.gmane.org>,
+	Mike Kravetz <mike.kravetz-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>,
+	Joonsoo Kim <iamjoonsoo.kim-Hm3cg6mZ9cc@public.gmane.org>, David Rientjes
+	<rientjes-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>, Nitin Gupta
+	<nitin-PQsoZtsL2ru1MwkOinUWXQ@public.gmane.org>, linux-kernel
+	<linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>, linux-mm
+	<linux-mm-Bw31MaZKKs3YtjvyW6yDsg@public.gmane.org>, Linux API
+	<linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+Subject: [PATCH v3] mm: Proactive compaction
+Date: Tue, 10 Mar 2020 15:25:39 -0700
+
+For some applications we need to allocate almost all memory as
+hugepages. However, on a running system, higher order allocations can
+fail if the memory is fragmented. Linux kernel currently does on-demand
+compaction as we request more hugepages but this style of compaction
+incurs very high latency. Experiments with one-time full memory
+compaction (followed by hugepage allocations) shows that kernel is able
+to restore a highly fragmented memory state to a fairly compacted memory
+state within <1 sec for a 32G system. Such data suggests that a more
+proactive compaction can help us allocate a large fraction of memory as
+hugepages keeping allocation latencies low.
+
+For a more proactive compaction, the approach taken here is to define
+a new tunable called 'proactiveness' which dictates bounds for external
+fragmentation wrt HUGETLB_PAGE_ORDER order which kcompactd tries to
+maintain.
+
+The tunable is exposed through sysfs:
+  /sys/kernel/mm/compaction/proactiveness
+
+It takes value in range [0, 100], with a default of 20.
+
+Note that a previous version of this patch [1] was found to introduce too
+many tunables (per-order extfrag{low, high}) but this one reduces them
+to just one (proactiveness). Also, the new tunable is an opaque value
+instead of asking for specific bounds of "external fragmentation" which
+would have been difficult to estimate. The internal interpretation of
+this opaque value allows for future fine-tuning.
+
+Currently, we use a simple translation from this tunable to [low, high]
+"proactive compaction score" thresholds (low=100-proactiveness,
+high=low+10%). The score for a node is defined as weighed mean of per-zone
+external fragmentation wrt HUGETLB_PAGE_ORDER order. A zone's present_pages
+determines its weight. Proactive compaction is triggered when a node's
+score exceeds its high threshold value and continues till it reaches its
+the low value.
+
+To periodically check per-node score, we reuse per-node kcompactd
+threads which are woken up every 500 milliseconds to check the same. If
+a node's score exceeds its high threshold (as derived from user provided
+proactiveness value), proactive compaction is started till its score
+reaches its low threshold value. By default, proactiveness is set to 20,
+which implies threshold values of low=80 and high=90.
+
+This patch is largely based on ideas from Michal Hocko posted here:
+https://lore.kernel.org/linux-mm/20161230131412.GI13301-2MMpYkNvuYDjFM9bn6wA6Q@public.gmane.org/
+
+Performance data
+================
+
+System: x64_64, 1T RAM, 80 CPU threads.
+Kernel: 5.6.0-rc3 + this patch
+
+echo madvise | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+echo madvise | sudo tee /sys/kernel/mm/transparent_hugepage/defrag
+
+Before starting the driver, the system was fragmented from a userspace
+program that allocates all memory and then for each 2M aligned section,
+frees 3/4 of base pages using munmap. The workload is mainly anonymous
+userspace pages which are easy to move around. I intentionally avoided
+unmovable pages in this test to see how much latency we incur when
+hugepage allocations hit direct compaction.
+
+1. Kernel hugepage allocation latencies
+
+With system in such a fragmented state, a kernel driver then allocates
+as many hugepages as possible and measures allocation latency:
+
+(all latency values are in microseconds)
+
+- With vanilla 5.6.0-rc3
+
+echo 0 | sudo tee /sys/kernel/mm/compaction/node-*/proactiveness
+
+  percentile latency
+  –––––––––– –––––––
+	   5    7894
+	  10    9496
+	  25   12561
+	  30   15295
+	  40   18244
+	  50   21229
+	  60   27556
+	  75   30147
+	  80   31047
+	  90   32859
+	  95   33799
+
+Total 2M hugepages allocated = 383859 (749G worth of hugepages out of
+762G total free => 98% of free memory could be allocated as hugepages)
+
+- With 5.6.0-rc3 + this patch, with proactiveness=20
+
+echo 20 | sudo tee /sys/kernel/mm/compaction/node-*/proactiveness
+
+  percentile latency
+  –––––––––– –––––––
+	   5       2
+	  10       2
+	  25       3
+	  30       3
+	  40       3
+	  50       4
+	  60       4
+	  75       4
+	  80       4
+	  90       5
+	  95     429
+
+Total 2M hugepages allocated = 384105 (750G worth of hugepages out of
+762G total free => 98% of free memory could be allocated as hugepages)
+
+2. JAVA heap allocation
+
+In this test, we first fragment memory using the same method as for (1).
+
+Then, we start a Java process with a heap size set to 700G and request
+the heap to be allocated with THP hugepages. We also set THP to madvise
+to allow hugepage backing of this heap.
+
+/usr/bin/time
+ java -Xms700G -Xmx700G -XX:+UseTransparentHugePages -XX:+AlwaysPreTouch
+
+The above command allocates 700G of Java heap using hugepages.
+
+- With vanilla 5.6.0-rc3
+
+17.39user 1666.48system 27:37.89elapsed
+
+- With 5.6.0-rc3 + this patch, with proactiveness=20
+
+8.35user 194.58system 3:19.62elapsed
+
+Elapsed time remains around 3:15 as proactiveness is further increased.
+
+Note that proactive compaction happens throughout the runtime of these
+benchmarks. The situation of one-time compaction, sufficient to supply
+hugepages for following allocation stream, can probably happen for more
+extreme proactiveness values, like 80 or 90.
+
+In the above Java benchmark, proactiveness=20. The test starts with a
+node's score of 80 or higher, depending on the delay between the
+fragmentation step and actually starting the benchmark, which gives
+more-or-less time for the initial round of compaction. As the benchmark
+consumes hugepages, node's score quickly rises above the high threshold
+(90) and proactive compaction starts again which (hopefully) brings down
+extfrag levels to the low threshold level (80).  Repeat.
+
+bpftrace also confirms proactive compaction running 20+ times during the
+runtime of this Java benchmark. kcompactd threads consume 100% of one of
+the CPUs while it tries to bring a node's score within thresholds.
+
+Backoff behavior
+================
+
+Above workloads produces a memory state which is easy to compact.
+However, if memory is filled with unmovable pages, proactive compaction
+should essentially back off. To test this aspect:
+
+- Created a kernel driver that allocates almost all memory as hugepages
+  followed by freeing first 3/4 of each hugepage.
+- Set proactiveness=40
+- Note that proactive_compact_node() is deferred maximum number of times
+  with HPAGE_FRAG_CHECK_INTERVAL_MSEC of wait between each check
+  (=> ~30 seconds between retries).
+
+[1] https://patchwork.kernel.org/patch/11098289/
+
+Signed-off-by: Nitin Gupta <nigupta-DDmLM1+adcrQT0dZR+AlfA@public.gmane.org>
+To: Mel Gorman <mgorman-3eNAlZScCAx27rWaFMvyedHuzzzSOjJt@public.gmane.org>
+To: Michal Hocko <mhocko-IBi9RG/b67k@public.gmane.org>
+To: Vlastimil Babka <vbabka-AlSwsSmVLrQ@public.gmane.org>
+CC: Matthew Wilcox <willy-wEGCiKHe2LqWVfeAwA7xHQ@public.gmane.org>
+CC: Andrew Morton <akpm-de/tnXTf+JLsfHDXvbKv3WD2FQJk+8+b@public.gmane.org>
+CC: Mike Kravetz <mike.kravetz-QHcLZuEGTsvQT0dZR+AlfA@public.gmane.org>
+CC: Joonsoo Kim <iamjoonsoo.kim-Hm3cg6mZ9cc@public.gmane.org>
+CC: David Rientjes <rientjes-hpIqsD4AKlfQT0dZR+AlfA@public.gmane.org>
+CC: Nitin Gupta <nitin-PQsoZtsL2ru1MwkOinUWXQ@public.gmane.org>
+CC: linux-kernel <linux-kernel-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+CC: linux-mm <linux-mm-Bw31MaZKKs3YtjvyW6yDsg@public.gmane.org>
+CC: Linux API <linux-api-u79uwXL29TY76Z2rM5mHXA@public.gmane.org>
+
+---
+Changelog v3 vs v2:
+ - Make proactiveness a global tunable and not per-node. Also upadated the
+   patch description to reflect the same (Vlastimil Babka).
+ - Don't start proactive compaction if kswapd is running (Vlastimil Babka).
+ - Clarified in the description that compaction runs in parallel with
+   the workload, instead of a one-time compaction followed by a stream of
+   hugepage allocations.
+
+Changelog v2 vs v1:
+ - Introduce per-node and per-zone "proactive compaction score". This
+   score is compared against watermarks which are set according to
+   user provided proactiveness value.
+ - Separate code-paths for proactive compaction from targeted compaction
+   i.e. where pgdat->kcompactd_max_order is non-zero.
+ - Renamed hpage_compaction_effort -> proactiveness. In future we may
+   use more than extfrag wrt hugepage size to determine proactive
+   compaction score.
+---
+ include/linux/compaction.h |   1 +
+ mm/compaction.c            | 195 +++++++++++++++++++++++++++++++++++--
+ mm/internal.h              |   1 +
+ mm/page_alloc.c            |   1 +
+ mm/vmstat.c                |  12 +++
+ 5 files changed, 204 insertions(+), 6 deletions(-)
+
+diff --git a/include/linux/compaction.h b/include/linux/compaction.h
+index 4b898cdbdf05..47c5df1fa59c 100644
+--- a/include/linux/compaction.h
++++ b/include/linux/compaction.h
+@@ -90,6 +90,7 @@ extern int sysctl_compaction_handler(struct ctl_table *table, int write,
+ extern int sysctl_extfrag_threshold;
+ extern int sysctl_compact_unevictable_allowed;
+ 
++extern int extfrag_for_order(struct zone *zone, unsigned int order);
+ extern int fragmentation_index(struct zone *zone, unsigned int order);
+ extern enum compact_result try_to_compact_pages(gfp_t gfp_mask,
+ 		unsigned int order, unsigned int alloc_flags,
+diff --git a/mm/compaction.c b/mm/compaction.c
+index 672d3c78c6ab..0344315ae044 100644
+--- a/mm/compaction.c
++++ b/mm/compaction.c
+@@ -26,6 +26,8 @@
+ #include "internal.h"
+ 
+ #ifdef CONFIG_COMPACTION
++static unsigned int compaction_proactiveness = 20;
++
+ static inline void count_compact_event(enum vm_event_item item)
+ {
+ 	count_vm_event(item);
+@@ -50,6 +52,8 @@ static inline void count_compact_events(enum vm_event_item item, long delta)
+ #define pageblock_start_pfn(pfn)	block_start_pfn(pfn, pageblock_order)
+ #define pageblock_end_pfn(pfn)		block_end_pfn(pfn, pageblock_order)
+ 
++static const int HPAGE_FRAG_CHECK_INTERVAL_MSEC = 500;
++
+ static unsigned long release_freepages(struct list_head *freelist)
+ {
+ 	struct page *page, *next;
+@@ -1846,6 +1850,56 @@ static inline bool is_via_compact_memory(int order)
+ 	return order == -1;
+ }
+ 
++static bool kswapd_is_running(pg_data_t *pgdat)
++{
++	return pgdat->kswapd && (pgdat->kswapd->state == TASK_RUNNING);
++}
++
++static int proactive_compaction_score_zone(struct zone *zone)
++{
++	unsigned long score;
++
++	score = zone->present_pages *
++			extfrag_for_order(zone, HUGETLB_PAGE_ORDER);
++	score = div64_ul(score,
++			node_present_pages(zone->zone_pgdat->node_id) + 1);
++	return score;
++}
++
++static int proactive_compaction_score_node(pg_data_t *pgdat)
++{
++	unsigned long score = 0;
++	int zoneid;
++
++	for (zoneid = 0; zoneid < MAX_NR_ZONES; zoneid++) {
++		struct zone *zone;
++
++		zone = &pgdat->node_zones[zoneid];
++		score += proactive_compaction_score_zone(zone);
++	}
++
++	return score;
++}
++
++static int proactive_compaction_score_wmark(pg_data_t *pgdat, bool low)
++{
++	int wmark_low;
++
++	wmark_low = 100 - compaction_proactiveness;
++	return low ? wmark_low : min(wmark_low + 10, 100);
++}
++
++static bool should_proactive_compact_node(pg_data_t *pgdat)
++{
++	int wmark_high;
++
++	if (!compaction_proactiveness || kswapd_is_running(pgdat))
++		return false;
++
++	wmark_high = proactive_compaction_score_wmark(pgdat, false);
++	return proactive_compaction_score_node(pgdat) > wmark_high;
++}
++
+ static enum compact_result __compact_finished(struct compact_control *cc)
+ {
+ 	unsigned int order;
+@@ -1872,6 +1926,25 @@ static enum compact_result __compact_finished(struct compact_control *cc)
+ 			return COMPACT_PARTIAL_SKIPPED;
+ 	}
+ 
++	if (cc->proactive_compaction) {
++		int score, wmark_low;
++		pg_data_t *pgdat;
++
++		pgdat = cc->zone->zone_pgdat;
++		if (kswapd_is_running(pgdat))
++			return COMPACT_PARTIAL_SKIPPED;
++
++		score = proactive_compaction_score_zone(cc->zone);
++		wmark_low = proactive_compaction_score_wmark(pgdat, true);
++
++		if (score > wmark_low)
++			ret = COMPACT_CONTINUE;
++		else
++			ret = COMPACT_SUCCESS;
++
++		goto out;
++	}
++
+ 	if (is_via_compact_memory(cc->order))
+ 		return COMPACT_CONTINUE;
+ 
+@@ -1930,6 +2003,7 @@ static enum compact_result __compact_finished(struct compact_control *cc)
+ 		}
+ 	}
+ 
++out:
+ 	if (cc->contended || fatal_signal_pending(current))
+ 		ret = COMPACT_CONTENDED;
+ 
+@@ -2301,6 +2375,7 @@ static enum compact_result compact_zone_order(struct zone *zone, int order,
+ 		.alloc_flags = alloc_flags,
+ 		.classzone_idx = classzone_idx,
+ 		.direct_compaction = true,
++		.proactive_compaction = false,
+ 		.whole_zone = (prio == MIN_COMPACT_PRIORITY),
+ 		.ignore_skip_hint = (prio == MIN_COMPACT_PRIORITY),
+ 		.ignore_block_suitable = (prio == MIN_COMPACT_PRIORITY)
+@@ -2404,6 +2479,34 @@ enum compact_result try_to_compact_pages(gfp_t gfp_mask, unsigned int order,
+ 	return rc;
+ }
+ 
++/* Compact all zones within a node according to proactiveness */
++static void proactive_compact_node(pg_data_t *pgdat)
++{
++	int zoneid;
++	struct zone *zone;
++	struct compact_control cc = {
++		.order = -1,
++		.mode = MIGRATE_SYNC_LIGHT,
++		.ignore_skip_hint = true,
++		.whole_zone = true,
++		.gfp_mask = GFP_KERNEL,
++		.direct_compaction = false,
++		.proactive_compaction = true,
++	};
++
++	for (zoneid = 0; zoneid < MAX_NR_ZONES; zoneid++) {
++		zone = &pgdat->node_zones[zoneid];
++		if (!populated_zone(zone))
++			continue;
++
++		cc.zone = zone;
++
++		compact_zone(&cc, NULL);
++
++		VM_BUG_ON(!list_empty(&cc.freepages));
++		VM_BUG_ON(!list_empty(&cc.migratepages));
++	}
++}
+ 
+ /* Compact all zones within a node */
+ static void compact_node(int nid)
+@@ -2417,9 +2520,10 @@ static void compact_node(int nid)
+ 		.ignore_skip_hint = true,
+ 		.whole_zone = true,
+ 		.gfp_mask = GFP_KERNEL,
++		.direct_compaction = false,
++		.proactive_compaction = false,
+ 	};
+ 
+-
+ 	for (zoneid = 0; zoneid < MAX_NR_ZONES; zoneid++) {
+ 
+ 		zone = &pgdat->node_zones[zoneid];
+@@ -2492,6 +2596,63 @@ void compaction_unregister_node(struct node *node)
+ }
+ #endif /* CONFIG_SYSFS && CONFIG_NUMA */
+ 
++#ifdef CONFIG_SYSFS
++
++#define COMPACTION_ATTR_RO(_name) \
++	static struct kobj_attribute _name##_attr = __ATTR_RO(_name)
++
++#define COMPACTION_ATTR(_name) \
++	static struct kobj_attribute _name##_attr = \
++		__ATTR(_name, 0644, _name##_show, _name##_store)
++
++static struct kobject *compaction_kobj;
++
++static ssize_t proactiveness_store(struct kobject *kobj,
++		struct kobj_attribute *attr, const char *buf, size_t count)
++{
++	int err;
++	unsigned long input;
++
++	err = kstrtoul(buf, 10, &input);
++	if (err)
++		return err;
++	if (input > 100)
++		return -EINVAL;
++
++	compaction_proactiveness = input;
++	return count;
++}
++
++static ssize_t proactiveness_show(struct kobject *kobj,
++		struct kobj_attribute *attr, char *buf)
++{
++	return sprintf(buf, "%u\n", compaction_proactiveness);
++}
++
++COMPACTION_ATTR(proactiveness);
++
++static struct attribute *compaction_attrs[] = {
++	&proactiveness_attr.attr,
++	NULL,
++};
++
++static const struct attribute_group compaction_attr_group = {
++	.attrs = compaction_attrs,
++};
++
++static void __init compaction_sysfs_init(void)
++{
++	compaction_kobj = kobject_create_and_add("compaction", mm_kobj);
++	if (!compaction_kobj)
++		return;
++
++	if (sysfs_create_group(compaction_kobj, &compaction_attr_group)) {
++		kobject_put(compaction_kobj);
++		compaction_kobj = NULL;
++	}
++}
++#endif
++
+ static inline bool kcompactd_work_requested(pg_data_t *pgdat)
+ {
+ 	return pgdat->kcompactd_max_order > 0 || kthread_should_stop();
+@@ -2532,6 +2693,8 @@ static void kcompactd_do_work(pg_data_t *pgdat)
+ 		.mode = MIGRATE_SYNC_LIGHT,
+ 		.ignore_skip_hint = false,
+ 		.gfp_mask = GFP_KERNEL,
++		.direct_compaction = false,
++		.proactive_compaction = false,
+ 	};
+ 	trace_mm_compaction_kcompactd_wake(pgdat->node_id, cc.order,
+ 							cc.classzone_idx);
+@@ -2629,6 +2792,7 @@ static int kcompactd(void *p)
+ {
+ 	pg_data_t *pgdat = (pg_data_t*)p;
+ 	struct task_struct *tsk = current;
++	unsigned int proactive_defer = 0;
+ 
+ 	const struct cpumask *cpumask = cpumask_of_node(pgdat->node_id);
+ 
+@@ -2644,12 +2808,29 @@ static int kcompactd(void *p)
+ 		unsigned long pflags;
+ 
+ 		trace_mm_compaction_kcompactd_sleep(pgdat->node_id);
+-		wait_event_freezable(pgdat->kcompactd_wait,
+-				kcompactd_work_requested(pgdat));
++		if (wait_event_freezable_timeout(pgdat->kcompactd_wait,
++			kcompactd_work_requested(pgdat),
++			msecs_to_jiffies(HPAGE_FRAG_CHECK_INTERVAL_MSEC))) {
+ 
+-		psi_memstall_enter(&pflags);
+-		kcompactd_do_work(pgdat);
+-		psi_memstall_leave(&pflags);
++			psi_memstall_enter(&pflags);
++			kcompactd_do_work(pgdat);
++			psi_memstall_leave(&pflags);
++			continue;
++		}
++
++		if (should_proactive_compact_node(pgdat)) {
++			unsigned int prev_score, score;
++
++			if (proactive_defer) {
++				proactive_defer--;
++				continue;
++			}
++			prev_score = proactive_compaction_score_node(pgdat);
++			proactive_compact_node(pgdat);
++			score = proactive_compaction_score_node(pgdat);
++			proactive_defer = score < prev_score ?
++					0 : 1 << COMPACT_MAX_DEFER_SHIFT;
++		}
+ 	}
+ 
+ 	return 0;
+@@ -2726,6 +2907,8 @@ static int __init kcompactd_init(void)
+ 		return ret;
+ 	}
+ 
++	compaction_sysfs_init();
++
+ 	for_each_node_state(nid, N_MEMORY)
+ 		kcompactd_run(nid);
+ 	return 0;
+diff --git a/mm/internal.h b/mm/internal.h
+index 3cf20ab3ca01..e66bafd6c7a2 100644
+--- a/mm/internal.h
++++ b/mm/internal.h
+@@ -203,6 +203,7 @@ struct compact_control {
+ 	bool no_set_skip_hint;		/* Don't mark blocks for skipping */
+ 	bool ignore_block_suitable;	/* Scan blocks considered unsuitable */
+ 	bool direct_compaction;		/* False from kcompactd or /proc/... */
++	bool proactive_compaction;	/* kcompactd proactive compaction */
+ 	bool whole_zone;		/* Whole zone should/has been scanned */
+ 	bool contended;			/* Signal lock or sched contention */
+ 	bool rescan;			/* Rescanning the same pageblock */
+diff --git a/mm/page_alloc.c b/mm/page_alloc.c
+index 3c4eb750a199..e92c706e93ee 100644
+--- a/mm/page_alloc.c
++++ b/mm/page_alloc.c
+@@ -8402,6 +8402,7 @@ int alloc_contig_range(unsigned long start, unsigned long end,
+ 		.ignore_skip_hint = true,
+ 		.no_set_skip_hint = true,
+ 		.gfp_mask = current_gfp_context(gfp_mask),
++		.proactive_compaction = false,
+ 	};
+ 	INIT_LIST_HEAD(&cc.migratepages);
+ 
+diff --git a/mm/vmstat.c b/mm/vmstat.c
+index 78d53378db99..70d724122643 100644
+--- a/mm/vmstat.c
++++ b/mm/vmstat.c
+@@ -1074,6 +1074,18 @@ static int __fragmentation_index(unsigned int order, struct contig_page_info *in
+ 	return 1000 - div_u64( (1000+(div_u64(info->free_pages * 1000ULL, requested))), info->free_blocks_total);
+ }
+ 
++int extfrag_for_order(struct zone *zone, unsigned int order)
++{
++	struct contig_page_info info;
++
++	fill_contig_page_info(zone, order, &info);
++	if (info.free_pages == 0)
++		return 0;
++
++	return (info.free_pages - (info.free_blocks_suitable << order)) * 100
++							/ info.free_pages;
++}
++
+ /* Same as __fragmentation index but allocs contig_page_info on stack */
+ int fragmentation_index(struct zone *zone, unsigned int order)
+ {

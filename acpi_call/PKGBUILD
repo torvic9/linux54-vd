@@ -10,7 +10,7 @@
 # enable/disable module signing
 _signing=1
 # enable/disable clang
-_clang=1
+_clang=0
 
 _linuxprefix=linux54-vd
 _extramodules=extramodules-5.4-vd

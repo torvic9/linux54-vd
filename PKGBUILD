@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=27
+_sub=28
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -46,9 +46,6 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0010-amdgpu-unlock-srbm-mutex.patch
 		0011-amdgpu-revert-dont-schedule-jobs-while-in-reset.patch
 		#
-		# BMQ scheduler
-		#0001-bmq-linux54-20200117.patch::https://gitlab.com/alfredchen/bmq/raw/master/5.4/bmq_v5.4-r2.patch
-		#
 		# sirlucjan
 		0001-kbuild-reuse-intermediate-linker-scripts::https://raw.githubusercontent.com/sirlucjan/kernel-patches/master/5.5/fixes-miscellaneous-v8-sep/0005-kbuild-reuse-intermediate-linker-scripts-in-the-fina.patch
 		#
@@ -74,11 +71,12 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		#
 		# hho
 		0001-enable-O3-opt-for-all-arches.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/kconfig-20191211-enable-O3-for-all-arches.patch
-		0002-mm-split-vmalloc_sync_all.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/mm-20191009-split-vmalloc_sync_all.patch
+		0002-mm-patches.patch
 		0003-introduce-list-for-each-continue.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/"list-20191129-introduce-list_for_each_continue().patch"
 		0004-block-perf-optimisations.patch
 		0005-net-disable-tcp-ssthresh-cache.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/net-20191209-disable-TCP-ssthresh-metrics-cache-by-default.patch
 		0006-pipe-56-backports.patch
+		0007-vfs-keep-inodes-with-page-cache-off-shrinker.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/vfs-20200204-keep-inodes-with-page-cache-off-the-inode-shrinker-LRU.patch
 )
 
 validpgpkeys=(
@@ -86,12 +84,12 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('19b9cd362d647f2529c5ffc02ede52ac6b517eb685481b9cd00f7de3d30dec6b'
+sha256sums=('c863cc1346348f9a40083b4bc0d34375117b1c401af920994d42e855653ef7a4'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
             'a8172dee5d960e1b2fece8d535a3c49f54e0f8e3e2fb52dd5075e54f86ad617b'
-            '9d4e288dc6d869f4ee06c4f07b54e01cb2b77755c8057b304a9f54a7f91487d7'
+            'c397bae6e8b4506bb593cba3cd0926e32cd343fdbe839811d5bf19b7e732a060'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
             'dfe5f34a7a3f76c18cdb6a9bff1193b5f159536744d0524a881bc9fa7a6e0c8c'
@@ -109,9 +107,9 @@ sha256sums=('19b9cd362d647f2529c5ffc02ede52ac6b517eb685481b9cd00f7de3d30dec6b'
             'e42809933e33e6a12df61ca158af41141216a1bdd4c011a748724206faee69ca'
             '74fe306e22754d8488d5354b21233c087d3f7975fa88a8ff85f8a5e1d1ec6855'
             '956157b645057bc6da3469b147198cece28ad3f29d9917f62aa136a67dfa6f2f'
-            '88b5597753b01f90f77b99580943263969902ffc084972f8843e0659fdd5eb8f'
-            '47d26eb8a2ec74b3684ab61837ecfcdad5cdc40722ca01a32684dfdd3775fafc'
-            'b4a3d140bc93e4d224570c0f6b87c40c64148571588064858fcdc9f2406feeaa'
+            '082a4ad0d3e71b8371d3c1977d7036597d5134c4975e00c4b1c21b29af3bae95'
+            '0d4df8e8967d42bd15f959d883fd362e67a9b88c6b91475c0cc238da12c537f1'
+            '93344aa64331f7324b5a3647b9e9b15227f6fefc60037305d223d9e1cd273c73'
             'aa1695e04042c12934ca39209c480cf7aeda4d3598b31f93d544687629185fb7'
             '6ab9f154110c9e9ce343e41a7b9c5300e827e4e7d1f0de4eac07fa01db4dbc7d'
             'ae6910e35ce63118262050a15260a0665bb70a03fb3aeca562b87b7c444838d5'
@@ -122,17 +120,18 @@ sha256sums=('19b9cd362d647f2529c5ffc02ede52ac6b517eb685481b9cd00f7de3d30dec6b'
             '1a17de048e3b81e041142bbb57cd098f842c92b7e6df0d9eeae72134761e5838'
             'c6944879f5cdfd335a3adc75b6f6194d127ad93d4dd5bf90d2ad505e83c9b6d2'
             '607097f22f202cd829f12acce7a401fb7f7af5678ffeda90c1fc7da71b895ad7'
-            '97f59d09ef55ea8a3634ea426fdc5db0591f77cca14cfe2db49176f71af80037'
+            '129047e9d7a06d076e6194368387adb9220851c8c0ef1d9e5e26af73de9d39a0'
             '21eac56173eb18959bbf02c1687dc7fa2c5d1df063ec90e6507f0008ce88bbef'
-            '47844884e429ffc395f51610825271c2549d2ab28b52251407d5b4f8a21fe1d9'
+            '7af58eb9eac15775f38cb0a7df61d3bd7f235fd30781f9e631146393271efe7e'
             '7f9aa69187e7d197017c6bb15b623330e050a27ba384a3894cbd3e347fdd8a83'
             'b37b2132e97357201e039872c595da18aade6a64743d35ec33ebfd4d4851c3f4'
             '9c006e4845c22808c954ca2374a2a9dd927c192e4bdaf0d00c6abc559831106e'
-            'bc257b6461aab4844d5ed5b8df219f0552149df93da021575ac7f00d6005cff5')
+            'bc257b6461aab4844d5ed5b8df219f0552149df93da021575ac7f00d6005cff5'
+            '59a0580298d5440e5dd8d4e7f4e834d32b796c750ce2bece9be3f31c21991db1')
 
 export KBUILD_BUILD_USER=systemd-run
 export KBUILD_BUILD_HOST=manjaro
-_clang=1
+_clang=0
 
 if [[ ${_clang} -eq 1 ]]; then
 	CLANGOPTS="CC=/opt/clang10/bin/clang HOSTCC=/opt/clang10/bin/clang \
@@ -201,7 +200,7 @@ prepare() {
   else
     cat ../x509.genkey > ./certs/x509.genkey
     sed -i 's/vd54\-kernel\-key/signing\_key/' ./.config || exit 2
-    sed -i 's/vd54\-kernel\-pubkey//' ./.config || exit 2
+    sed -i 's/certs\/vd54\-kernel\-pubkey\.pem//' ./.config || exit 2
   fi
 
   if [ "${_kernelname}" != "" ]; then

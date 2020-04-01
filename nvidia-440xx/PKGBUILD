@@ -72,6 +72,6 @@ package() {
 			sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/$i"
     	done
 	fi
-    xz -T2 --lzma2=dict=2M "${pkgdir}/usr/lib/modules/${_extramodules}/"*.ko
+    xz -T2 -4 "${pkgdir}/usr/lib/modules/${_extramodules}/"*.ko
     sed -i -e "s/EXTRAMODULES='.*'/EXTRAMODULES='${_extramodules}'/" "${startdir}/nvidia.install"
 }
