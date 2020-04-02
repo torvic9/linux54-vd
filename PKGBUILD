@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=29
+_sub=30
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -84,7 +84,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('c7d2a4228ca8948a95f04810e136b380dd7c9680a94ebd05f13540c9a1955acb'
+sha256sums=('11dd78f701bce619d90d3b2ee597601716c48087e159c890c1decd7b90349def'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
