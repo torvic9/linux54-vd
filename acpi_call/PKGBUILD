@@ -55,7 +55,7 @@ package() {
   	echo -e "Signing modules with kernel key...\n"
   	sign-file54.sh "${pkgdir}/usr/lib/modules/${_extramodules}/acpi_call.ko"
   fi
-  xz -T2 -4 "${pkgdir}"/usr/lib/modules/${_extramodules}/acpi_call.ko
+  xz --lzma2=preset=4,dict=2M "${pkgdir}"/usr/lib/modules/${_extramodules}/acpi_call.ko
   echo acpi_call > "${pkgdir}"/usr/lib/modules-load.d/${pkgname}.conf
 
   install -dm 755 "${pkgdir}"/usr/share/${pkgname}
