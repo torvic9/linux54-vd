@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=38
+_sub=40
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -84,7 +84,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('e72b9fa4e3a222d42d64dce9915e5b18f1b75ae722d529a1e560ced2e5d0f30e'
+sha256sums=('83563f027687ecaafb41d0d2d52056f40ec9822f8a9e43592e215349730020ab'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
@@ -92,7 +92,7 @@ sha256sums=('e72b9fa4e3a222d42d64dce9915e5b18f1b75ae722d529a1e560ced2e5d0f30e'
             'c397bae6e8b4506bb593cba3cd0926e32cd343fdbe839811d5bf19b7e732a060'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
-            'd98382cbb5964b2aa9ab514cc2bf3d4f10a1e42753173fbf98720d7694d9257c'
+            'f358691e20386d2e9ab8a2293128666608d37267157520bb1c679813cb7becde'
             '0556859a8168c8f7da9af8e2059d33216d9e5378d2cac70ca54c5ff843fa5add'
             '7a2758f86dd1339f0f1801de2dbea059b55bf3648e240878b11e6d6890d3089c'
             'c449d684f27a44c2368622b6f76abb960c03281218d4512969c567371a74afe0'
