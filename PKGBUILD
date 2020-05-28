@@ -11,7 +11,7 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=40
+_sub=42
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
 pkgrel=1
@@ -70,7 +70,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0006-tune-cpufreq-ondemand.patch
 		#
 		# hho
-		0001-enable-O3-opt-for-all-arches.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/kconfig-20191211-enable-O3-for-all-arches.patch
+		#0001-enable-O3-opt-for-all-arches.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/kconfig-20191211-enable-O3-for-all-arches.patch
 		0002-mm-patches.patch
 		0003-introduce-list-for-each-continue.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/"list-20191129-introduce-list_for_each_continue().patch"
 		0004-block-perf-optimisations.patch
@@ -84,7 +84,7 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('83563f027687ecaafb41d0d2d52056f40ec9822f8a9e43592e215349730020ab'
+sha256sums=('4e431b7c0266a07b76fdb77f8917ad681f0fa34ffba0eb8a172b67f7ef57bc31'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
@@ -121,7 +121,6 @@ sha256sums=('83563f027687ecaafb41d0d2d52056f40ec9822f8a9e43592e215349730020ab'
             'c6944879f5cdfd335a3adc75b6f6194d127ad93d4dd5bf90d2ad505e83c9b6d2'
             '607097f22f202cd829f12acce7a401fb7f7af5678ffeda90c1fc7da71b895ad7'
             '129047e9d7a06d076e6194368387adb9220851c8c0ef1d9e5e26af73de9d39a0'
-            '21eac56173eb18959bbf02c1687dc7fa2c5d1df063ec90e6507f0008ce88bbef'
             '7af58eb9eac15775f38cb0a7df61d3bd7f235fd30781f9e631146393271efe7e'
             '7f9aa69187e7d197017c6bb15b623330e050a27ba384a3894cbd3e347fdd8a83'
             'b37b2132e97357201e039872c595da18aade6a64743d35ec33ebfd4d4851c3f4'
