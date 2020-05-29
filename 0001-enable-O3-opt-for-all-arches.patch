@@ -1,0 +1,12 @@
+--- a/init/Kconfig	2020-05-28 09:25:43.818480014 +0200
++++ b/init/Kconfig	2020-05-28 09:28:00.948795554 +0200
+@@ -1224,9 +1224,8 @@
+ 	  helpful compile-time warnings.
+ 
+ config CC_OPTIMIZE_FOR_PERFORMANCE_O3
+ 	bool "Optimize more for performance (-O3)"
+-	depends on ARC
+ 	help
+ 	  Choosing this option will pass "-O3" to your compiler to optimize
+ 	  the kernel yet more for performance.
+ 

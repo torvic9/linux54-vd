@@ -8,16 +8,16 @@
 # torvic9
 
 # enable/disable module signing
-_signing=1
+_signing=0
 
 _linuxprefix=linux54-vd
 _extramodules=extramodules-5.4-vd
 pkgbase=$_linuxprefix-virtualbox-modules
 pkgname=("$_linuxprefix-virtualbox-host-modules")
 	#"$_linuxprefix-virtualbox-guest-modules"
-pkgver=6.1.6
+pkgver=6.1.8
 _pkgver="${pkgver}_OSE"
-pkgrel=2
+pkgrel=1
 arch=('x86_64')
 url='http://virtualbox.org'
 license=('GPL')

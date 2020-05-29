@@ -11,11 +11,11 @@ pkgbase=linux54-vd
 pkgname=('linux54-vd' 'linux54-vd-headers')
 _basekernel=5.4
 _kernelname=-vd
-_sub=42
+_sub=43
 kernelbase=${_basekernel}${_kernelname}
 pkgver=${_basekernel}.${_sub}
-pkgrel=1
-_archpatch=20200429
+pkgrel=2
+_archpatch=20200528
 arch=('x86_64')
 url="http://www.kernel.org/"
 license=('GPL2')
@@ -70,7 +70,7 @@ source=(https://cdn.kernel.org/pub/linux/kernel/v5.x/linux-${pkgver}.tar.{xz,sig
 		0006-tune-cpufreq-ondemand.patch
 		#
 		# hho
-		#0001-enable-O3-opt-for-all-arches.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/kconfig-20191211-enable-O3-for-all-arches.patch
+		0001-enable-O3-opt-for-all-arches.patch
 		0002-mm-patches.patch
 		0003-introduce-list-for-each-continue.patch::https://raw.githubusercontent.com/hhoffstaette/kernel-patches/5.4/5.4/"list-20191129-introduce-list_for_each_continue().patch"
 		0004-block-perf-optimisations.patch
@@ -84,12 +84,12 @@ validpgpkeys=(
   '647F28654894E3BD457199BE38DBBDC86092693E'  # Greg Kroah-Hartman
 )
 
-sha256sums=('4e431b7c0266a07b76fdb77f8917ad681f0fa34ffba0eb8a172b67f7ef57bc31'
+sha256sums=('2667b90a42d42557aca9e3d37bba1b4e71809b9523958e6870ada311c4790744'
             'SKIP'
             'cb6362ca3ca8053b2ba0a55cf8c9634017357f57ce3ec97e125f60eb973c2581'
             '131cfc84d68d5db26e568590a510bdf8d61e911dee9a31737f8185e1578b7317'
             'a8172dee5d960e1b2fece8d535a3c49f54e0f8e3e2fb52dd5075e54f86ad617b'
-            'c397bae6e8b4506bb593cba3cd0926e32cd343fdbe839811d5bf19b7e732a060'
+            '1052ed9017cacf12a1818cf84d27e9642b0853b6efbf1a1e8ee2581ac3c0a597'
             'ab010dc5ef6ce85d352956e5996d242246ecd0912b30f0b72025c38eadff8cd5'
             'c14f60f37c5ef16d104aaa05fdc470f8d6d341181f5370b92918c283728e5625'
             'f358691e20386d2e9ab8a2293128666608d37267157520bb1c679813cb7becde'
@@ -107,9 +107,9 @@ sha256sums=('4e431b7c0266a07b76fdb77f8917ad681f0fa34ffba0eb8a172b67f7ef57bc31'
             'e42809933e33e6a12df61ca158af41141216a1bdd4c011a748724206faee69ca'
             '74fe306e22754d8488d5354b21233c087d3f7975fa88a8ff85f8a5e1d1ec6855'
             '956157b645057bc6da3469b147198cece28ad3f29d9917f62aa136a67dfa6f2f'
-            'dafccaf29aac34d37fbe417bf382493c364258001538840c7d65a36f64b35c1f'
-            '2489cc78c577c36900f6703536ec37809f9bf65bcd90420ad977d3df28b950b1'
-            '0325baebeca6acb7ad5c6b2a6309610ec2266dbcf57bef7ba8d626189ca9567f'
+            '082a4ad0d3e71b8371d3c1977d7036597d5134c4975e00c4b1c21b29af3bae95'
+            '0d4df8e8967d42bd15f959d883fd362e67a9b88c6b91475c0cc238da12c537f1'
+            '93344aa64331f7324b5a3647b9e9b15227f6fefc60037305d223d9e1cd273c73'
             'aa1695e04042c12934ca39209c480cf7aeda4d3598b31f93d544687629185fb7'
             '6ab9f154110c9e9ce343e41a7b9c5300e827e4e7d1f0de4eac07fa01db4dbc7d'
             'ae6910e35ce63118262050a15260a0665bb70a03fb3aeca562b87b7c444838d5'
@@ -121,6 +121,7 @@ sha256sums=('4e431b7c0266a07b76fdb77f8917ad681f0fa34ffba0eb8a172b67f7ef57bc31'
             'c6944879f5cdfd335a3adc75b6f6194d127ad93d4dd5bf90d2ad505e83c9b6d2'
             '607097f22f202cd829f12acce7a401fb7f7af5678ffeda90c1fc7da71b895ad7'
             '129047e9d7a06d076e6194368387adb9220851c8c0ef1d9e5e26af73de9d39a0'
+            'ebe7707e2fda90fc3bd37972be1bd113a2929e36555eabc217237829d72251dd'
             '7af58eb9eac15775f38cb0a7df61d3bd7f235fd30781f9e631146393271efe7e'
             '7f9aa69187e7d197017c6bb15b623330e050a27ba384a3894cbd3e347fdd8a83'
             'b37b2132e97357201e039872c595da18aade6a64743d35ec33ebfd4d4851c3f4'

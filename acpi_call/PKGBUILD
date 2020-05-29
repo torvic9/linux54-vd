@@ -8,7 +8,7 @@
 # torvic9
 
 # enable/disable module signing
-_signing=1
+_signing=0
 # enable/disable clang
 _clang=0
 
